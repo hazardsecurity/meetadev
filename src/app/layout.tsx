@@ -8,7 +8,7 @@ const code = Google_Sans_Code({ variable: "--font-google-sans-code", subsets: ["
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   applicationName: "meetadev",
-  title: { default: "meetadev · Networking for DevFest & GDG events", template: "%s · meetadev" },
+  title: { default: "meetadev", template: "%s · meetadev" },
   description:
     "Organisers create a space for their DevFest or GDG event; attendees find mentors, learners, collaborators and teams that are hiring. Contacts are only swapped when both people say yes.",
 };

@@ -7,7 +7,7 @@ export function Logo({ href = "/", subtitle }: { href?: string; subtitle?: strin
       <BrandMark size={30} />
       <span className="logo__text">
         meetadev
-        <small>{subtitle ?? "for DevFest & GDG events"}</small>
+        {subtitle && <small>{subtitle}</small>}
       </span>
     </Link>
   );
