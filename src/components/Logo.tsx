@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function Logo({ href = "/", subtitle }: { href?: string; subtitle?: string }) {
   return (
-    <Link href={href} className="logo" aria-label="Connect, home">
+    <Link href={href} className="logo" aria-label="meetadev, home">
       <span className="logo__mark" aria-hidden>
         <i style={{ background: "var(--blue)" }} />
         <i style={{ background: "var(--red)" }} />
@@ -10,7 +10,7 @@ export function Logo({ href = "/", subtitle }: { href?: string; subtitle?: strin
         <i style={{ background: "var(--yellow)" }} />
       </span>
       <span className="logo__text">
-        Connect
+        meetadev
         <small>{subtitle ?? "for DevFest & GDG events"}</small>
       </span>
     </Link>

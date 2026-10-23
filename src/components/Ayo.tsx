@@ -10,7 +10,7 @@ const SHADE = "#2f6fd6";
 const ANTENNA = ["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#EA4335"];
 
 /**
- * Ayo, the Connect buddy. A round little helper with an antenna that
+ * Ayo, the meetadev buddy. A round little helper with an antenna that
  * cycles through the festival colours. Purely decorative: pass `label` only
  * when the character itself carries meaning.
  */

@@ -18,14 +18,14 @@ export async function GET() {
       c.phone && c.phone !== c.whatsapp && `TEL;TYPE=VOICE:${esc(c.phone)}`,
       c.contact_email && `EMAIL:${esc(c.contact_email)}`,
       `TITLE:${esc(c.headline || roleLabel(c.role))}`,
-      `NOTE:${esc(c.event_name ? `Met at ${c.event_name}` : "Met on Connect")}`,
+      `NOTE:${esc(c.event_name ? `Met at ${c.event_name}` : "Met on meetadev")}`,
       "END:VCARD",
     ].filter(Boolean).join("\r\n"),
   );
   return new Response(cards.join("\r\n") + "\r\n", {
     headers: {
       "Content-Type": "text/vcard; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="devfest-ilorin-contacts.vcf"',
+      "Content-Disposition": 'attachment; filename="meetadev-contacts.vcf"',
       "Cache-Control": "no-store",
     },
   });

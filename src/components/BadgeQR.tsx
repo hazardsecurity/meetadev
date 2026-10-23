@@ -17,7 +17,7 @@ export function BadgeQR({ handle, name }: { handle: string; name: string }) {
 
   const share = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title: `${name} on Connect`, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: `${name} on meetadev`, url }); } catch { /* dismissed */ }
     } else {
       await navigator.clipboard.writeText(url);
       setCopied(true);

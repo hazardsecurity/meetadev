@@ -1,4 +1,6 @@
-# Connect, for DevFest & GDG events
+# meetadev
+
+Networking for DevFest & GDG events.
 
 Organisers create a space for their DevFest or GDG event. Attendees join it with a link or code, and find the people they should meet there (mentors, learners, people hiring, future co-founders). Contacts are swapped only when both people say yes.
 
@@ -40,7 +42,7 @@ Without Google keys you can still test locally: set `ALLOW_DEV_LOGIN=1` in `.env
 
 ## Set up Google sign-in
 
-1. In [Google Cloud Console](https://console.cloud.google.com/) create or pick a project, then go to **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name ("DevFest Ilorin Connect") and support email, add the scopes `openid`, `email` and `profile`, and **publish** the app so anyone can sign in.
+1. In [Google Cloud Console](https://console.cloud.google.com/) create or pick a project, then go to **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name ("meetadev") and support email, add the scopes `openid`, `email` and `profile`, and **publish** the app so anyone can sign in.
 2. **Credentials → Create credentials → OAuth client ID → Web application.**
    - Authorised JavaScript origin: `https://your-domain`
    - Authorised redirect URI: `https://your-domain/api/auth/google/callback`

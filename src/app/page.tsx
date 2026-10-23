@@ -13,7 +13,7 @@ export default async function Home() {
     <>
       <header className="wrap topbar__in">
         <Logo />
-        <Link className="btn btn--white btn--sm" href={me ? "/events" : "/login"}>{me ? "Open Connect" : "Sign in with Google"}</Link>
+        <Link className="btn btn--white btn--sm" href={me ? "/events" : "/login"}>{me ? "Open meetadev" : "Sign in with Google"}</Link>
       </header>
 
       <main>

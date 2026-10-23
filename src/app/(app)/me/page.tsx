@@ -33,7 +33,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         <div className="lanyard__strap" aria-hidden />
         <div className="badge-card">
           <div className="badge-card__band" aria-hidden><i /><i /><i /><i /></div>
-          <p className="eyebrow" style={{ textAlign: "center" }}>Connect · Attendee badge</p>
+          <p className="eyebrow" style={{ textAlign: "center" }}>meetadev · Attendee badge</p>
           <div className="stack" style={{ justifyItems: "center", textAlign: "center", "--gap": "8px" } as React.CSSProperties}>
             <Avatar name={p.name} color={p.color} photo={p.photo_url} size={72} />
             <h1 className="h2">{p.name}</h1>
