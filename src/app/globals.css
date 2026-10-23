@@ -183,8 +183,6 @@ h1, h2, h3, p { margin: 0; }
 }
 .topbar__in { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
 .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; }
-.logo__mark { display: grid; grid-template-columns: repeat(2, 9px); gap: 3px; transform: rotate(45deg); }
-.logo__mark i { width: 9px; height: 9px; border-radius: 50%; }
 .logo__text { line-height: 1.05; }
 .logo__text small { display: block; font-family: var(--mono); font-weight: 500; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 
