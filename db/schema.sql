@@ -1,0 +1,84 @@
+-- DevFest Ilorin Connect schema. Idempotent: safe to run on every deploy.
+
+CREATE TABLE IF NOT EXISTS users (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email      text NOT NULL,
+  google_sub text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (lower(email));
+-- Sign-in is Google only. Earlier databases had a password column; keep them working.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub text;
+ALTER TABLE users DROP COLUMN IF EXISTS password_hash;
+CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub_key ON users (google_sub);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash text PRIMARY KEY,
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  user_id       uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  handle        text NOT NULL UNIQUE,
+  name          text NOT NULL,
+  headline      text NOT NULL DEFAULT '',
+  bio           text NOT NULL DEFAULT '',
+  role          text NOT NULL DEFAULT '',
+  level         text NOT NULL DEFAULT '',
+  intents       text[] NOT NULL DEFAULT '{}',
+  stack         text[] NOT NULL DEFAULT '{}',
+  -- Private: only shown to accepted connections
+  whatsapp      text NOT NULL DEFAULT '',
+  phone         text NOT NULL DEFAULT '',
+  contact_email text NOT NULL DEFAULT '',
+  -- Public links
+  linkedin      text NOT NULL DEFAULT '',
+  github        text NOT NULL DEFAULT '',
+  x_handle      text NOT NULL DEFAULT '',
+  website       text NOT NULL DEFAULT '',
+  photo_url     text NOT NULL DEFAULT '',
+  color         smallint NOT NULL DEFAULT 0,
+  listed        boolean NOT NULL DEFAULT true,
+  onboarded     boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS photo_url text NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS connection_requests (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_user    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  note         text NOT NULL DEFAULT '',
+  status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  responded_at timestamptz,
+  UNIQUE (from_user, to_user),
+  CHECK (from_user <> to_user)
+);
+CREATE INDEX IF NOT EXISTS requests_to_idx ON connection_requests (to_user, status);
+
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker, blocked)
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reported   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason     text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key          text PRIMARY KEY,
+  window_start timestamptz NOT NULL,
+  count        integer NOT NULL
+);

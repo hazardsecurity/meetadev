@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DevFest Ilorin Connect
 
-## Getting Started
+Find the people you should meet at DevFest Ilorin (mentors, learners, people hiring, future co-founders) and swap contacts only when both people say yes.
 
-First, run the development server:
+Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, suggests matches, and reacts as you go.
+
+## What it does
+
+- **Badge onboarding**: role, level, what you're here for, stack, intro, private contact, public links.
+- **"People you should meet"**: matches mentors with people who want a mentor, hiring with job hunting, co-founder with co-founder, shared stack, and so on. Every suggestion says why.
+- **Directory** with search and filters (role, level, intent, stack) plus quick filters.
+- **Connection requests** with an optional note. If two people request each other, they connect automatically.
+- **Private contact details**: WhatsApp, phone and email are only sent to the browser once a request is accepted. A declined request still looks "sent" to the sender.
+- **My badge**: a QR code that opens your profile, for connecting in person; profile strength meter.
+- **Contacts**: one-tap WhatsApp, a 10-person goal, and "Save all to phone" (.vcf export).
+- **Safety**: block, report, hide from the directory, rate limits (sign-ups, logins, 40 requests/day).
+- **Sign in with Google only.** No passwords. First sign-in creates the account (name and photo come from Google), and later sign-ins go straight back in.
+- Optional **event code**: set `EVENT_CODE` and first-time sign-ins must enter it.
+
+## Run locally
 
 ```bash
+cp .env.example .env.local   # set DATABASE_URL to a Postgres database
+npm install
+npm run migrate
+npm run seed:demo            # optional: 8 made-up attendees (local DBs only)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without Google keys you can still test locally: set `ALLOW_DEV_LOGIN=1` in `.env.local` and a "sign in as test attendee" form appears for `@example.test` emails. It only works under `next dev`; production builds return 404 for it. See `docs/TESTING.md`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Set up Google sign-in
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. In [Google Cloud Console](https://console.cloud.google.com/) create or pick a project, then go to **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name ("DevFest Ilorin Connect") and support email, add the scopes `openid`, `email` and `profile`, and **publish** the app so anyone can sign in.
+2. **Credentials → Create credentials → OAuth client ID → Web application.**
+   - Authorised JavaScript origin: `https://your-domain`
+   - Authorised redirect URI: `https://your-domain/api/auth/google/callback`
+   - For local work also add `http://localhost:3000` and `http://localhost:3000/api/auth/google/callback` (use your port).
+3. Put `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `APP_URL` in Vercel → Settings → Environment Variables (and in `.env.local` for local).
 
-## Learn More
+## Deploy (Vercel + Neon)
 
-To learn more about Next.js, take a look at the following resources:
+1. Push to GitHub and import the repo in Vercel.
+2. Add a Neon Postgres database from the Vercel Marketplace. That sets `DATABASE_URL` / `DATABASE_URL_UNPOOLED`.
+3. Add the Google variables above, and optionally `EVENT_CODE`.
+4. Deploy. `prebuild` runs the migration on every deploy.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Next.js 16 (App Router, Server Actions, `proxy.ts`), Postgres via `pg`, zod, Motion, `qrcode`. Google Sans / Google Sans Code fonts. Auth is Google OpenID Connect (authorization code + PKCE, state check, no extra library); sessions are httpOnly cookies and only token hashes are stored.
 
-## Deploy on Vercel
+## Not built yet
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- An organiser page for reading reports. For now: `SELECT * FROM reports`.
+- Uploading a different profile photo (the Google photo is used, otherwise coloured initials).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Not an official Google product. Google and DevFest are trademarks of Google LLC.
