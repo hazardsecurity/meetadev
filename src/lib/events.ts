@@ -170,3 +170,43 @@ export async function knownCities() {
   );
   return rows.map((r) => r.city);
 }
+
+// ---------------------------------------------------------------------------
+// Leaderboard: accepted connections made at this event, per person.
+// People hidden from the directory are left off.
+
+export type LeaderRow = {
+  user_id: string;
+  name: string;
+  handle: string;
+  headline: string;
+  photo_url: string;
+  color: number;
+  connections: number;
+  rank: number;
+};
+
+const LEADER_CTE = `
+  WITH c AS (
+    SELECT from_user AS u FROM connection_requests WHERE event_id = $1 AND status = 'accepted'
+    UNION ALL
+    SELECT to_user FROM connection_requests WHERE event_id = $1 AND status = 'accepted'
+  ), scored AS (
+    SELECT p.user_id, p.name, p.handle, p.headline, p.photo_url, p.color, count(*)::int AS connections
+      FROM c
+      JOIN profiles p ON p.user_id = c.u
+      JOIN event_members m ON m.event_id = $1 AND m.user_id = c.u
+     WHERE p.listed
+     GROUP BY p.user_id
+  ), ranked AS (
+    SELECT *, rank() OVER (ORDER BY connections DESC)::int AS rank FROM scored
+  )`;
+
+export async function leaderboard(eventId: string, limit = 50) {
+  return query<LeaderRow>(`${LEADER_CTE} SELECT * FROM ranked ORDER BY rank, name LIMIT $2`, [eventId, limit]);
+}
+
+export async function myStanding(eventId: string, userId: string) {
+  const rows = await query<LeaderRow>(`${LEADER_CTE} SELECT * FROM ranked WHERE user_id = $2`, [eventId, userId]);
+  return rows[0] ?? null;
+}

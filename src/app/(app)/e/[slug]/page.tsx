@@ -94,7 +94,10 @@ async function Directory({ event, viewerId, viewerName, organiser, sp }: {
     <div className="stack" style={{ "--gap": "28px" } as React.CSSProperties}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
         <EventHeader event={event} members={count} compact />
-        {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+        <div className="row">
+          <Link className="btn btn--yellow btn--sm" href={`${base}/leaderboard`}>🏆 Leaderboard</Link>
+          {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+        </div>
       </div>
 
       {sp.joined && <p className="card card--green success">You&apos;re in! Here&apos;s who&apos;s at {event.name}.</p>}

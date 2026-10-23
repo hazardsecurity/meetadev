@@ -4,8 +4,18 @@ const EVENT_COOKIE = "dfi_event";
 
 // Fast gate for signed-in screens (pages still verify the session in the
 // database), and remembers the last event visited so "People" opens it.
+// Search engines and link previews always get the real landing page.
+const BOT = /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|discord|preview|embed|lighthouse/i;
+
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // First visit: ask "attending or organising?" before the landing page.
+  if (pathname === "/") {
+    const firstVisit =
+      !request.cookies.has("dfi_session") && !request.cookies.has("mad_start") && !BOT.test(request.headers.get("user-agent") ?? "");
+    return firstVisit ? NextResponse.rewrite(new URL("/start", request.url)) : NextResponse.next();
+  }
   const eventPath = pathname.match(/^\/e\/([a-z0-9-]+)(\/.*)?$/);
   const publicEventPage = eventPath && !eventPath[2];
 
@@ -24,6 +34,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/people/:path*", "/p/:path*", "/requests/:path*", "/connections/:path*", "/me/:path*",
     "/onboarding/:path*", "/welcome/:path*", "/events/:path*", "/e/:path*", "/admin/:path*",
   ],

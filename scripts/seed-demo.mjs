@@ -44,6 +44,14 @@ if (!process.argv.includes("--remove")) {
     );
     await client.query("INSERT INTO event_members (event_id, user_id) VALUES ($1, $2)", [event.id, rows[0].id]);
   }
+  // Some accepted connections so the leaderboard has something to show.
+  const pairs = [[0, 1], [0, 5], [0, 7], [0, 2], [6, 1], [6, 7], [6, 3], [2, 4], [4, 3], [1, 5]];
+  for (const [a, b] of pairs)
+    await client.query(
+      `INSERT INTO connection_requests (from_user, to_user, status, responded_at, event_id)
+       SELECT (SELECT id FROM users WHERE email = $1), (SELECT id FROM users WHERE email = $2), 'accepted', now(), $3`,
+      [`demo+${a}@example.test`, `demo+${b}@example.test`, event.id],
+    );
   console.log(`seed:demo: added ${people.length} demo attendees to /e/demo-devfest (join code DEMO26)`);
 } else console.log("seed:demo: removed demo attendees");
 await client.end();

@@ -7,3 +7,4 @@ Local-only test data. Never use these on a deployed site.
 - In the local test database: `tester@example.test` organises `/e/devfest-ilorin-2026` and is in the demo event;
   `newbie@example.test` is banned from `devfest-ilorin-2026`; `coder@example.test` is in the demo event.
 - Set `ADMIN_EMAILS=tester@example.test` in `.env.local` to test `/admin`. `coder@example.test` is an approved organiser and created `/e/devfest-lagos-2026`.
+- `neworg@example.test` went through the organiser path (badge done, not yet applied). The demo event has seeded connections for the leaderboard.

@@ -29,6 +29,7 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
           <h1 className="h1" style={{ overflowWrap: "anywhere" }}>{event.name}</h1>
         </div>
         <div className="row">
+          <Link className="btn btn--white btn--sm" href={`/e/${slug}/leaderboard`}>🏆 Leaderboard</Link>
           <Link className="btn btn--white btn--sm" href={`/e/${slug}/screen`} target="_blank">Show on screen ↗</Link>
           <Link className="btn btn--sm" href={`/e/${slug}`}>Open directory</Link>
         </div>

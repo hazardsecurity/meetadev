@@ -33,6 +33,14 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
   const [pending, start] = useTransition();
   const still = useReducedMotion();
   const step = STEPS[i];
+  // Coming from "I'm a GDG organiser": explain why organisers make a badge too.
+  const organiser = !editing && next.startsWith("/events/new");
+  const say = (p: ProfileInput) =>
+    organiser && i === 0
+      ? `Hey ${p.name.split(" ")[0]}! Organisers get a badge too, so attendees can find you. First, what do you do?`
+      : organiser && i === STEPS.length - 1
+        ? "Last one! After this, you'll apply as an organiser."
+        : step.say(p);
   const last = i === STEPS.length - 1;
 
   const set = <K extends keyof ProfileInput>(k: K, v: ProfileInput[K]) => { setP((s) => ({ ...s, [k]: v })); setError(""); };
@@ -61,7 +69,7 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
       </div>
 
       <div className="wrap onb__body">
-        <AyoSays mood={error ? "sad" : step.mood ?? "happy"} size={104}>{error || step.say(p)}</AyoSays>
+        <AyoSays mood={error ? "sad" : step.mood ?? "happy"} size={104}>{error || say(p)}</AyoSays>
 
         <AnimatePresence mode="wait" initial={false}>
           <motion.section
