@@ -1,50 +1,246 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, type PanInfo } from "motion/react";
+import { useCallback, useEffect, useState } from "react";
 import { Ayo } from "./Ayo";
 import { BrandMark } from "./BrandMark";
 
-const OPTIONS = [
-  { choice: "attend", emoji: "🎟️", title: "I'm attending", hint: "Find events in your city and the people worth meeting there", tone: "blue" },
-  { choice: "organise", emoji: "🎤", title: "I'm organising", hint: "Set up your GDG chapter's event with an invite link and QR code", tone: "green" },
-] as const;
+type Slide = { title: string; body: string; art: () => React.ReactNode };
+
+const SLIDES: Slide[] = [
+  {
+    title: "meetadev",
+    body: "Meet the people you came to meet at DevFest and GDG events: mentors, learners, collaborators and teams that are hiring.",
+    art: () => <ArtCrowd />,
+  },
+  {
+    title: "I'll find your people",
+    body: "Tell me what you do and what you're looking for. I'll point out who at the event you should say hi to, and why.",
+    art: () => <ArtMatch />,
+  },
+  {
+    title: "Your number stays yours",
+    body: "Send a request, or scan someone's badge. WhatsApp and phone numbers are only swapped when you both say yes.",
+    art: () => <ArtPrivacy />,
+  },
+  {
+    title: "Climb the leaderboard",
+    body: "Every connection counts. See who's met the most people at your event, and how many more you need to move up.",
+    art: () => <ArtPodium />,
+  },
+];
+const LAST = SLIDES.length; // the final "who are you?" step
 
 export function GetStarted() {
+  const [[index, dir], setPage] = useState<[number, number]>([0, 1]);
   const still = useReducedMotion();
-  const pop = (n: number) =>
-    still ? {} : { initial: { opacity: 0, y: 16, scale: 0.96 }, animate: { opacity: 1, y: 0, scale: 1 }, transition: { type: "spring" as const, stiffness: 380, damping: 24, delay: 0.25 + n * 0.08 } };
+  const go = useCallback((to: number) => setPage(([i]) => [Math.max(0, Math.min(LAST, to)), to > i ? 1 : -1]), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") go(index + 1);
+      if (e.key === "ArrowLeft") go(index - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [go, index]);
+
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.x < -60 || info.velocity.x < -400) go(index + 1);
+    else if (info.offset.x > 60 || info.velocity.x > 400) go(index - 1);
+  };
+
+  const slide = SLIDES[index];
+  const variants = {
+    enter: (d: number) => (still ? { opacity: 0 } : { opacity: 0, x: d * 80 }),
+    center: { opacity: 1, x: 0 },
+    exit: (d: number) => (still ? { opacity: 0 } : { opacity: 0, x: d * -80 }),
+  };
 
   return (
-    <main className="start">
-      <div className="start__brand"><BrandMark size={28} /><strong>meetadev</strong></div>
+    <main className="intro">
+      <header className="intro__top">
+        <span className="intro__brand"><BrandMark size={26} /><strong>meetadev</strong></span>
+        {index < LAST && <button className="intro__skip" onClick={() => go(LAST)}>Skip</button>}
+      </header>
 
-      <div className="start__body">
-        <motion.div {...(still ? {} : { initial: { scale: 0.5, opacity: 0 }, animate: { scale: 1, opacity: 1 }, transition: { type: "spring", stiffness: 400, damping: 18 } })}>
-          <Ayo mood="wave" size={132} label="Ayo, the meetadev buddy, waving" />
-        </motion.div>
-        <motion.div className="bubble start__q" {...pop(0)}>
-          Hi, I&apos;m Ayo! Are you heading to a DevFest or GDG event?
-        </motion.div>
+      <AnimatePresence mode="wait" custom={dir} initial={false}>
+        <motion.section
+          key={index}
+          className="intro__slide"
+          custom={dir}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.32, ease: [0.4, 0, 0.05, 1] }}
+          drag={still ? false : "x"}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={onDragEnd}
+          aria-roledescription="slide"
+          aria-label={`${index + 1} of ${LAST + 1}`}
+        >
+          <div className="intro__art">{slide ? slide.art() : <ArtChoose />}</div>
+          <div className="intro__copy">
+            <p className="eyebrow">{index + 1} of {LAST + 1}</p>
+            {slide ? (
+              <>
+                <h1 className={index === 0 ? "display intro__title" : "h1 intro__title"}>{slide.title}</h1>
+                <p className="lead">{slide.body}</p>
+              </>
+            ) : (
+              <>
+                <h1 className="h1 intro__title">Who are you here as?</h1>
+                <div className="intro__choices">
+                  <a href="/api/start?choice=attend" className="start__option start__option--blue">
+                    <span className="start__emoji" aria-hidden>🎟️</span>
+                    <span><strong>I&apos;m attending</strong><span className="start__hint">Find events in your city and the people worth meeting</span></span>
+                    <span className="start__arrow" aria-hidden>→</span>
+                  </a>
+                  <a href="/api/start?choice=organise" className="start__option start__option--green">
+                    <span className="start__emoji" aria-hidden>🎤</span>
+                    <span><strong>I&apos;m organising</strong><span className="start__hint">Set up your GDG chapter&apos;s event</span></span>
+                    <span className="start__arrow" aria-hidden>→</span>
+                  </a>
+                </div>
+                <p className="start__links">
+                  <a href="/api/start?choice=code">I have a join code</a>
+                  <span aria-hidden>·</span>
+                  <a href="/api/start?choice=browse">Just looking around</a>
+                </p>
+              </>
+            )}
+          </div>
+        </motion.section>
+      </AnimatePresence>
 
-        <div className="start__options">
-          {OPTIONS.map((o, n) => (
-            <motion.a key={o.choice} href={`/api/start?choice=${o.choice}`} className={`start__option start__option--${o.tone}`} {...pop(n + 1)}>
-              <span className="start__emoji" aria-hidden>{o.emoji}</span>
-              <span>
-                <strong>{o.title}</strong>
-                <span className="start__hint">{o.hint}</span>
-              </span>
-              <span className="start__arrow" aria-hidden>→</span>
-            </motion.a>
+      <footer className="intro__foot">
+        <div className="intro__dots" role="tablist" aria-label="Intro slides">
+          {Array.from({ length: LAST + 1 }, (_, n) => (
+            <button key={n} role="tab" aria-selected={n === index} aria-label={`Slide ${n + 1}`}
+              className={n === index ? "is-on" : undefined} onClick={() => go(n)} />
           ))}
         </div>
-
-        <motion.div className="start__links" {...pop(3)}>
-          <a href="/api/start?choice=code">I have a join code</a>
-          <span aria-hidden>·</span>
-          <a href="/api/start?choice=browse">Just looking around</a>
-        </motion.div>
-      </div>
+        <div className="intro__nav">
+          {index > 0 && <button className="btn btn--white" onClick={() => go(index - 1)}>Back</button>}
+          {index < LAST && (
+            <button className="btn intro__next" onClick={() => go(index + 1)}>{index === LAST - 1 ? "Get started" : "Next"}</button>
+          )}
+        </div>
+      </footer>
     </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Illustrations: simple shapes plus Ayo, in the festival colours.
+
+const Face = ({ initials, color, big }: { initials: string; color: string; big?: boolean }) => (
+  <span className={`art-face ${big ? "art-face--big" : ""}`} style={{ background: color, color: color === "var(--yellow)" ? "var(--ink)" : "#fff" }}>
+    {initials}
+  </span>
+);
+
+function Person({ initials, color, tag, tone }: { initials: string; color: string; tag: string; tone: string }) {
+  return (
+    <span className="art-person">
+      <Face initials={initials} color={color} />
+      <span className={`chip chip--${tone}`}>{tag}</span>
+    </span>
+  );
+}
+
+function ArtCrowd() {
+  return (
+    <div className="art">
+      <div className="art__row">
+        <Person initials="TA" color="var(--blue)" tag="Mentor" tone="green" />
+        <Person initials="AB" color="var(--red)" tag="Learning" tone="blue" />
+      </div>
+      <Ayo mood="wave" size={132} />
+      <div className="art__row">
+        <Person initials="KA" color="var(--green)" tag="Hiring" tone="green" />
+        <Person initials="CO" color="var(--yellow)" tag="Designer" tone="yellow" />
+      </div>
+    </div>
+  );
+}
+
+function ArtMatch() {
+  return (
+    <div className="art">
+      <div className="art-card">
+        <Face initials="AB" color="var(--red)" />
+        <span><strong>Aisha</strong><span className="chip chip--yellow">Wants a mentor</span></span>
+      </div>
+      <div className="art__row" style={{ alignItems: "center" }}>
+        <Ayo mood="happy" size={84} />
+        <span className="art-why">💡 You both work with Flutter</span>
+      </div>
+      <div className="art-card">
+        <Face initials="TA" color="var(--blue)" />
+        <span><strong>Tolu</strong><span className="chip chip--green">Mentors in Flutter</span></span>
+      </div>
+    </div>
+  );
+}
+
+function ArtPrivacy() {
+  const still = useReducedMotion();
+  return (
+    <div className="art">
+      <div className="art__row" style={{ alignItems: "center", gap: 18 }}>
+        <Face initials="TA" color="var(--blue)" big />
+        <motion.span
+          className="art-lock"
+          animate={still ? {} : { rotate: [0, -12, 12, 0], scale: [1, 1.12, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1.4 }}
+          aria-hidden
+        >
+          🔒
+        </motion.span>
+        <Face initials="KA" color="var(--green)" big />
+      </div>
+      <div className="art__row">
+        <span className="chip chip--green">✓ Tolu said yes</span>
+        <span className="chip chip--green">✓ Kunle said yes</span>
+      </div>
+      <Ayo mood="wink" size={84} />
+    </div>
+  );
+}
+
+function ArtPodium() {
+  return (
+    <div className="art">
+      <Ayo mood="excited" size={92} />
+      <div className="podium art-podium">
+        {[
+          { rank: 2, n: 3, face: "AB", color: "var(--red)" },
+          { rank: 1, n: 4, face: "TA", color: "var(--blue)" },
+          { rank: 3, n: 2, face: "CO", color: "var(--green)" },
+        ].map((p) => (
+          <div key={p.rank} className={`podium__slot podium__slot--${p.rank}`}>
+            <span className="podium__medal" aria-hidden>{["🥇", "🥈", "🥉"][p.rank - 1]}</span>
+            <Face initials={p.face} color={p.color} />
+            <span className="podium__score">{p.n}</span>
+            <span className="podium__block">{p.rank}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ArtChoose() {
+  return (
+    <div className="art">
+      <Ayo mood="thinking" size={140} />
+      <div className="art__row">
+        <span className="chip chip--blue">🎟️ Attending</span>
+        <span className="chip chip--green">🎤 Organising</span>
+      </div>
+    </div>
   );
 }
