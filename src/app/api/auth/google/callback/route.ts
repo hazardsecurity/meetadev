@@ -3,7 +3,7 @@ import { appOrigin, finishFlow, OAUTH_COOKIE } from "@/lib/google";
 import { clientIp } from "@/lib/ratelimit";
 import { completeSignIn, signInErrorUrl } from "@/lib/signin";
 
-type Pending = { state: string; verifier: string; next: string; code: string };
+type Pending = { state: string; verifier: string; next: string };
 
 export async function GET(request: NextRequest) {
   const origin = appOrigin(request.nextUrl.origin);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   let result;
   try {
     const identity = await finishFlow(code, pending.verifier, origin);
-    result = await completeSignIn(identity, { eventCode: pending.code, ip: await clientIp(), next });
+    result = await completeSignIn(identity, { ip: await clientIp(), next });
   } catch (error) {
     console.error("Google sign-in failed:", error);
     return fail("failed");

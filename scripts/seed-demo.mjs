@@ -1,6 +1,7 @@
 // Fills a LOCAL database with made-up attendees so the directory and matching
 // have something to show. Refuses to run against anything but localhost.
 // Usage: npm run seed:demo   (remove with: npm run seed:demo -- --remove)
+// Creates the event /e/demo-devfest with join code DEMO26.
 import { randomBytes } from "node:crypto";
 import pg from "pg";
 
@@ -24,7 +25,12 @@ const people = [
 const client = new pg.Client({ connectionString: url });
 await client.connect();
 await client.query("DELETE FROM users WHERE email LIKE 'demo+%@example.test'");
+await client.query("DELETE FROM events WHERE slug = 'demo-devfest'");
 if (!process.argv.includes("--remove")) {
+  const { rows: [event] } = await client.query(
+    `INSERT INTO events (slug, name, city, about, join_code) VALUES ('demo-devfest', 'Demo DevFest', 'Ilorin',
+     'A local test event full of made-up attendees.', 'DEMO26') RETURNING id`,
+  );
   for (const [n, [name, headline, role, level, intents, stack]] of people.entries()) {
     const { rows } = await client.query(
       "INSERT INTO users (email, google_sub) VALUES ($1, $2) RETURNING id",
@@ -36,7 +42,8 @@ if (!process.argv.includes("--remove")) {
       [rows[0].id, `demo-${n}`, name, headline, role, level, intents, stack, "+234 800 000 000" + n, n % 4,
        "Demo profile for local testing. Not a real person."],
     );
+    await client.query("INSERT INTO event_members (event_id, user_id) VALUES ($1, $2)", [event.id, rows[0].id]);
   }
-  console.log(`seed:demo: added ${people.length} demo attendees`);
+  console.log(`seed:demo: added ${people.length} demo attendees to /e/demo-devfest (join code DEMO26)`);
 } else console.log("seed:demo: removed demo attendees");
 await client.end();

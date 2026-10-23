@@ -18,7 +18,7 @@ export async function GET() {
       c.phone && c.phone !== c.whatsapp && `TEL;TYPE=VOICE:${esc(c.phone)}`,
       c.contact_email && `EMAIL:${esc(c.contact_email)}`,
       `TITLE:${esc(c.headline || roleLabel(c.role))}`,
-      `NOTE:${esc("Met at DevFest Ilorin")}`,
+      `NOTE:${esc(c.event_name ? `Met at ${c.event_name}` : "Met on Connect")}`,
       "END:VCARD",
     ].filter(Boolean).join("\r\n"),
   );

@@ -15,7 +15,7 @@ const PIECES = Array.from({ length: 28 }, (_, n) => ({
   d: (n % 7) * 0.04,
 }));
 
-export function Celebrate({ first, matches, next }: { first: string; matches: number; next: string }) {
+export function Celebrate({ first, line, cta, next }: { first: string; line: string; cta: string; next: string }) {
   const still = useReducedMotion();
   return (
     <div className="celebrate">
@@ -41,12 +41,8 @@ export function Celebrate({ first, matches, next }: { first: string; matches: nu
       <motion.div className="stack" style={{ justifyItems: "center", textAlign: "center" }}
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
         <h1 className="h1" style={{ color: "var(--green-shade)" }}>Your badge is ready, {first}!</h1>
-        <p className="lead">
-          {matches > 0
-            ? `I've already found ${matches} ${matches === 1 ? "person" : "people"} you should meet.`
-            : "You're one of the first here. As more people join, I'll suggest who to meet."}
-        </p>
-        <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>Meet people</Link>
+        <p className="lead">{line}</p>
+        <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>{cta}</Link>
       </motion.div>
     </div>
   );

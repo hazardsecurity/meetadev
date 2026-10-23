@@ -3,18 +3,16 @@ import { createAccount, findAccount, type Identity } from "./accounts";
 import { safeNext, startSession } from "./auth";
 import { allow } from "./ratelimit";
 
-export type SignInError = "code" | "busy";
+export type SignInError = "busy";
 
 /** Signs in (creating the account on first visit) and returns where to go next. */
 export async function completeSignIn(
   identity: Identity,
-  opts: { eventCode: string; ip: string; next: string },
+  opts: { ip: string; next: string },
 ): Promise<{ to: string } | { error: SignInError }> {
   let userId = await findAccount(identity);
   let isNew = false;
   if (!userId) {
-    const required = process.env.EVENT_CODE?.trim();
-    if (required && opts.eventCode.trim().toLowerCase() !== required.toLowerCase()) return { error: "code" };
     if (!(await allow(`signup:${opts.ip}`, 20, 3600))) return { error: "busy" };
     userId = await createAccount(identity);
     isNew = true;

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   if (!/^[^@\s]+@example\.test$/.test(email)) return NextResponse.redirect(signInErrorUrl(request.nextUrl.origin, "devemail", next), 303);
   const result = await completeSignIn(
     { sub: `dev-${createHash("sha256").update(email).digest("hex").slice(0, 16)}`, email, name: email.split("@")[0], picture: "" },
-    { eventCode: String(form.get("code") ?? ""), ip: await clientIp(), next },
+    { ip: await clientIp(), next },
   );
   if ("error" in result) return NextResponse.redirect(signInErrorUrl(request.nextUrl.origin, result.error, next), 303);
   return NextResponse.redirect(new URL(result.to, request.nextUrl.origin), 303);

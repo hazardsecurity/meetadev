@@ -10,7 +10,7 @@ const SHADE = "#2f6fd6";
 const ANTENNA = ["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#EA4335"];
 
 /**
- * Ayo, the DevFest Ilorin buddy. A round little helper with an antenna that
+ * Ayo, the Connect buddy. A round little helper with an antenna that
  * cycles through the festival colours. Purely decorative: pass `label` only
  * when the character itself carries meaning.
  */
@@ -37,7 +37,7 @@ export function Ayo({ mood = "happy", size = 120, label }: { mood?: Mood; size?:
     >
       {/* ground shadow */}
       <ellipse cx="60" cy="130" rx="34" ry="5" fill={INK} opacity="0.08" />
-      <motion.g animate={body} style={{ originX: "60px", originY: "128px" }}>
+      <motion.g animate={body} style={{ originX: 0.5, originY: 0.97 }}>
         {/* feet */}
         <ellipse cx="44" cy="122" rx="12" ry="7" fill="#FBBC05" />
         <ellipse cx="76" cy="122" rx="12" ry="7" fill="#FBBC05" />
@@ -48,7 +48,7 @@ export function Ayo({ mood = "happy", size = 120, label }: { mood?: Mood; size?:
         <motion.g
           animate={still ? {} : { rotate: mood === "thinking" ? [0, 12, 0] : [0, -8, 8, 0] }}
           transition={{ duration: mood === "thinking" ? 1.6 : 3, repeat: Infinity, ease: "easeInOut" }}
-          style={{ originX: "60px", originY: "26px" }}
+          style={{ originX: 0.5, originY: 1 }}
         >
           <path d="M60 26 L60 9" stroke={SHADE} strokeWidth="4.5" strokeLinecap="round" />
           <motion.circle
@@ -65,7 +65,7 @@ export function Ayo({ mood = "happy", size = 120, label }: { mood?: Mood; size?:
         {/* arms */}
         <ellipse cx="13" cy="84" rx="8" ry="13" fill={SHADE} transform="rotate(18 13 84)" />
         <motion.g
-          style={{ originX: "104px", originY: "74px" }}
+          style={{ originX: 0.3, originY: 0.15 }}
           animate={
             still
               ? {}
@@ -107,7 +107,7 @@ function Eyes({ mood, still }: { mood: Mood; still: boolean }) {
     closed ? (
       <path d={`M${cx - 10} 62 Q${cx} 52 ${cx + 10} 62`} stroke={INK} strokeWidth="4.5" strokeLinecap="round" fill="none" />
     ) : (
-      <motion.g animate={blink} style={{ originX: `${cx}px`, originY: "60px" }}>
+      <motion.g animate={blink} style={{ originX: 0.5, originY: 0.5 }}>
         <ellipse cx={cx} cy="60" rx="13" ry="15" fill="#fff" />
         <circle cx={cx + look.x} cy={62 + look.y} r="7" fill={INK} />
         <circle cx={cx + look.x + 2.5} cy={59 + look.y} r="2.4" fill="#fff" />

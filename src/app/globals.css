@@ -342,3 +342,48 @@ h1, h2, h3, p { margin: 0; }
 .btn--google { --fg: var(--ink); text-transform: none; letter-spacing: 0; font-size: 1rem; gap: 12px; }
 .dev-login { margin-top: 8px; padding-top: 16px; border-top: 2px dashed var(--line); }
 .avatar--photo { object-fit: cover; background: var(--line-soft); box-shadow: none; border: 2px solid var(--line-soft); }
+.logo { min-width: 0; }
+.logo__text { min-width: 0; }
+.logo__text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
+.event-switch { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 10px; border: 2px solid var(--line); color: var(--muted); font-weight: 700; }
+
+/* ---------- events ---------- */
+.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+.check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.check input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--blue); flex: none; }
+.code-input { font-family: var(--mono); letter-spacing: 0.2em; text-transform: uppercase; max-width: 200px; }
+.event-card { grid-template-columns: auto 1fr auto; align-items: center; }
+.event-card__mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; color: #fff; font-weight: 700; font-size: 1.3rem; box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.15); }
+.event-card__mark.avatar--2 { color: var(--ink); }
+.event-head { display: grid; gap: 10px; }
+.event-head__band { display: grid; grid-template-columns: repeat(4, 28px); gap: 4px; }
+.event-head__band i { height: 6px; border-radius: 3px; }
+.event-head__band i:nth-child(1) { background: var(--blue); } .event-head__band i:nth-child(2) { background: var(--red); }
+.event-head__band i:nth-child(3) { background: var(--yellow); } .event-head__band i:nth-child(4) { background: var(--green); }
+.event-head--compact .display { font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem); }
+.event-join { display: grid; gap: 28px; max-width: 980px; margin-inline: auto; padding-top: 16px; align-items: start; }
+@media (min-width: 860px) { .event-join { grid-template-columns: 1.2fr 1fr; padding-top: 40px; } }
+
+/* ---------- organiser ---------- */
+.manage { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 960px) { .manage { grid-template-columns: 360px 1fr; } .manage__invite { position: sticky; top: 88px; } }
+.invite-url { font-family: var(--mono); font-size: 0.78rem; background: var(--wash); border-radius: 8px; padding: 6px 10px; overflow-wrap: anywhere; text-align: center; max-width: 100%; }
+.join-code { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.18em; color: var(--blue); }
+.stats--4 { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 700px) { .stats--4 { grid-template-columns: repeat(4, 1fr); } }
+.member-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.member-list li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 2px solid var(--line-soft); }
+.member-list__actions { gap: 2px; }
+.member-list .btn--sm { min-height: 34px; padding: 0 10px; font-size: 0.72rem; }
+.danger { --fg: var(--red-shade); }
+.report { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--red-soft); }
+.report__reason { background: #fff; border-radius: 10px; padding: 8px 12px; white-space: pre-line; }
+.screen { position: fixed; inset: 0; z-index: 50; overflow: auto; min-height: 100dvh; display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; align-items: center; padding: 5vw; background: #fff; }
+.screen__copy { display: grid; gap: 20px; }
+.screen__lead { font-size: 1.6rem; color: var(--muted); max-width: 30ch; }
+.screen__code { font-size: 1.4rem; font-weight: 600; display: flex; align-items: center; gap: 16px; }
+.screen__code .join-code { font-size: 3rem; }
+@media (max-width: 860px) { .screen { grid-template-columns: 1fr; } }
+.audiences { display: grid; gap: 28px; }
+@media (min-width: 900px) { .audiences { grid-template-columns: 1fr 1fr; } }
+.steps__list--stack { grid-template-columns: 1fr !important; }

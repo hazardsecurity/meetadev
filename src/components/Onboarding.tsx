@@ -13,12 +13,12 @@ type Step = { key: string; say: (p: ProfileInput) => string; mood?: Mood; valid:
 const STEPS: Step[] = [
   { key: "role", say: (p) => `Hey ${p.name.split(" ")[0]}! What do you do?`, mood: "wave", valid: (p) => !!p.role },
   { key: "level", say: () => "Where are you on your journey? No wrong answers.", valid: (p) => !!p.level },
-  { key: "intents", say: () => "What are you hoping to get from DevFest? Pick all that fit.", valid: (p) => p.intents.length > 0 },
+  { key: "intents", say: () => "What are you hoping to get from events like this? Pick all that fit.", valid: (p) => p.intents.length > 0 },
   { key: "stack", say: () => "What do you work with, or want to learn? I'll match you with people who share it.", mood: "thinking", valid: () => true },
   { key: "about", say: () => "Give people a one-line hello so they know who to look out for.", valid: (p) => p.name.trim().length >= 2 },
   { key: "contact", say: () => "How should your connections reach you? Only people you accept will see this.", mood: "wink",
     valid: (p) => !!(p.whatsapp || p.phone || p.contact_email) },
-  { key: "links", say: () => "Last one! Public links anyone at DevFest can see. All optional.", mood: "excited", valid: () => true },
+  { key: "links", say: () => "Last one! Public links people at your events can see. All optional.", mood: "excited", valid: () => true },
 ];
 
 export function Onboarding({ initial, editing, next }: { initial: ProfileInput; editing: boolean; next: string }) {

@@ -72,6 +72,13 @@ export async function sendRequest(toUserId: string, note: string): Promise<FormS
   const cleanNote = noteSchema.safeParse(note);
   if (!cleanNote.success) return { error: "Keep your note under 200 characters." };
   if (await blockedBetween(me.id, toUserId)) return { error: "You can't connect with this person." };
+  // Only people at the same event can reach each other; remember which one.
+  const shared = await query<{ event_id: string }>(
+    `SELECT x.event_id FROM event_members x JOIN event_members y ON x.event_id = y.event_id
+      WHERE x.user_id = $1 AND y.user_id = $2 ORDER BY x.joined_at DESC LIMIT 1`,
+    [me.id, toUserId],
+  );
+  if (!shared[0]) return { error: "You can only connect with people at the same event." };
 
   // They already asked us: sending back counts as accepting.
   const reverse = await query<{ id: string }>(
@@ -88,9 +95,9 @@ export async function sendRequest(toUserId: string, note: string): Promise<FormS
     return { error: "You've sent 40 requests today. Give people time to reply, then try again tomorrow." };
 
   await query(
-    `INSERT INTO connection_requests (from_user, to_user, note) VALUES ($1, $2, $3)
+    `INSERT INTO connection_requests (from_user, to_user, note, event_id) VALUES ($1, $2, $3, $4)
      ON CONFLICT (from_user, to_user) DO NOTHING`,
-    [me.id, toUserId, cleanNote.data],
+    [me.id, toUserId, cleanNote.data, shared[0].event_id],
   );
   revalidatePath("/", "layout");
   return { ok: "sent" };
@@ -144,6 +151,14 @@ export async function reportUser(otherId: string, reason: string): Promise<FormS
   const text = reason.trim().slice(0, 500);
   if (text.length < 3) return { error: "Tell us briefly what happened." };
   if (!(await allow(`report:${me.id}`, 10, 86_400))) return { error: "You've sent a lot of reports today. Try tomorrow." };
-  await query("INSERT INTO reports (reporter, reported, reason) VALUES ($1, $2, $3)", [me.id, otherId, text]);
-  return { ok: "Thanks. The organisers will look into it." };
+  // File it with every event the two share, so each event's organisers see it.
+  const inserted = await query(
+    `INSERT INTO reports (reporter, reported, reason, event_id)
+     SELECT $1, $2, $3, x.event_id FROM event_members x JOIN event_members y ON x.event_id = y.event_id
+      WHERE x.user_id = $1 AND y.user_id = $2
+     RETURNING id`,
+    [me.id, otherId, text],
+  );
+  if (!inserted.length) await query("INSERT INTO reports (reporter, reported, reason) VALUES ($1, $2, $3)", [me.id, otherId, text]);
+  return { ok: "Thanks. The event organisers will look into it." };
 }

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   const { url, state, verifier } = startFlow(origin);
   const response = NextResponse.redirect(url, 303);
-  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, next, code: String(form.get("code") ?? "").slice(0, 60) }), {
+  response.cookies.set(OAUTH_COOKIE, JSON.stringify({ state, verifier, next }), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

@@ -26,10 +26,10 @@ export default async function ConnectionsPage() {
       <div className="card goal">
         <AyoSays mood={n >= GOAL ? "excited" : n > 0 ? "happy" : "wave"} size={72}>
           {n >= GOAL
-            ? `${n} connections! You're a DevFest networking legend.`
+            ? `${n} connections! You're a networking legend.`
             : n > 0
-              ? `${n} down, ${GOAL - n} to go for your DevFest goal. Keep going!`
-              : `Your DevFest goal: meet ${GOAL} new people. Let's start with one.`}
+              ? `${n} down, ${GOAL - n} to go for your goal. Keep going!`
+              : `Your goal: meet ${GOAL} new people. Let's start with one.`}
         </AyoSays>
         <div className="row" style={{ flexWrap: "nowrap" }}>
           <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={GOAL} aria-valuenow={Math.min(n, GOAL)} aria-label="Connection goal">

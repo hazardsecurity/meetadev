@@ -6,9 +6,9 @@ const sans = Google_Sans({ variable: "--font-google-sans", subsets: ["latin"] })
 const code = Google_Sans_Code({ variable: "--font-google-sans-code", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Connect · DevFest Ilorin", template: "%s · DevFest Ilorin Connect" },
+  title: { default: "Connect · Networking for DevFest & GDG events", template: "%s · Connect" },
   description:
-    "Find the people you should meet at DevFest Ilorin: mentors, learners, collaborators and teams that are hiring. Swap contacts only when you both say yes.",
+    "Organisers create a space for their DevFest or GDG event; attendees find mentors, learners, collaborators and teams that are hiring. Contacts are only swapped when both people say yes.",
 };
 
 export const viewport: Viewport = { themeColor: "#ffffff" };

@@ -82,3 +82,41 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   window_start timestamptz NOT NULL,
   count        integer NOT NULL
 );
+
+-- ---------------------------------------------------------------------------
+-- Events: organisers create a space; attendees join it. Directory, matching and
+-- requests happen inside an event. Profiles and connections are per person.
+
+CREATE TABLE IF NOT EXISTS events (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug         text NOT NULL UNIQUE,
+  name         text NOT NULL,
+  city         text NOT NULL DEFAULT '',
+  starts_on    date,
+  about        text NOT NULL DEFAULT '',
+  join_code    text NOT NULL,
+  require_code boolean NOT NULL DEFAULT false,
+  created_by   uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS event_members (
+  event_id  uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role      text NOT NULL DEFAULT 'attendee' CHECK (role IN ('attendee', 'organizer')),
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (event_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS event_members_user_idx ON event_members (user_id);
+
+CREATE TABLE IF NOT EXISTS event_bans (
+  event_id  uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  banned_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (event_id, user_id)
+);
+
+ALTER TABLE connection_requests ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE SET NULL;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS reports_event_idx ON reports (event_id);

@@ -7,20 +7,19 @@ const ERRORS: Record<string, string> = {
   cancelled: "No worries! Tap the button whenever you're ready.",
   expired: "That took a little too long. Let's try again.",
   failed: "Google didn't let us in that time. Please try again.",
-  code: "That event code isn't right. It's on the screens at the venue and in your attendee email.",
   busy: "Lots of people are joining from this network. Wait a few minutes and try again.",
   config: "Google sign-in isn't set up yet. Organisers: add the Google keys (see README).",
   devemail: "Test logins must end in @example.test.",
 };
 
-export function GoogleSignIn({ next, error, needsCode, devLogin }: { next: string; error: string; needsCode: boolean; devLogin: boolean }) {
+export function GoogleSignIn({ next, error, devLogin, eventName }: { next: string; error: string; devLogin: boolean; eventName?: string }) {
   const [pending, setPending] = useState(false);
-  const [focus, setFocus] = useState(false);
 
   let mood: Mood = "wave";
-  let line = "Hi, I'm Ayo! Sign in with Google and I'll help you meet the right people at DevFest Ilorin.";
+  let line = eventName
+    ? `Hi, I'm Ayo! Sign in with Google to join ${eventName} and meet the right people there.`
+    : "Hi, I'm Ayo! Sign in with Google and I'll help you meet the right people at your event.";
   if (error && ERRORS[error]) { mood = error === "cancelled" ? "thinking" : "sad"; line = ERRORS[error]; }
-  if (focus) { mood = "thinking"; line = "The event code is on the screens at the venue and in your attendee email."; }
   if (pending) { mood = "excited"; line = "Off to Google… see you in a sec!"; }
 
   return (
@@ -29,17 +28,10 @@ export function GoogleSignIn({ next, error, needsCode, devLogin }: { next: strin
         <AyoSays mood={mood} size={120} side="below">{line}</AyoSays>
       </div>
       <div className="card stack auth__form">
-        <h1 className="h1">Get your badge</h1>
+        <h1 className="h1">{eventName ? `Join ${eventName}` : "Get your badge"}</h1>
         <p className="muted">New here or coming back, it&apos;s the same button. No passwords to remember.</p>
         <form method="post" action="/api/auth/google" className="stack" onSubmit={() => setPending(true)}>
           <input type="hidden" name="next" value={next} />
-          {needsCode && (
-            <div className="field">
-              <label htmlFor="code">Event code <span className="hint">(first time only)</span></label>
-              <input id="code" name="code" className="input" autoComplete="off" autoCapitalize="characters"
-                onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} />
-            </div>
-          )}
           <button className="btn btn--white btn--block btn--google" disabled={pending}>
             <GoogleG />
             {pending ? "Opening Google…" : "Continue with Google"}
@@ -54,7 +46,6 @@ export function GoogleSignIn({ next, error, needsCode, devLogin }: { next: strin
           <form method="post" action="/api/auth/dev" className="stack dev-login">
             <p className="eyebrow">Local testing only</p>
             <input type="hidden" name="next" value={next} />
-            {needsCode && <input name="code" className="input" placeholder="Event code" />}
             <input name="email" type="email" className="input" placeholder="someone@example.test" required />
             <button className="btn btn--yellow btn--sm">Sign in as test attendee</button>
           </form>
