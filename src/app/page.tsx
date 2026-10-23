@@ -7,7 +7,7 @@ import { currentUser } from "@/lib/auth";
 export default async function Home() {
   const me = await currentUser();
   const createHref = me ? "/events/new" : `/login?next=${encodeURIComponent("/events/new")}`;
-  const joinHref = me ? "/events" : `/login?next=${encodeURIComponent("/events")}`;
+  const joinHref = "/discover";
 
   return (
     <>
@@ -24,12 +24,12 @@ export default async function Home() {
               Meet the people <span className="hl hl--blue">you</span> came to <span className="hl hl--yellow">meet</span>.
             </h1>
             <p className="lead">
-              Organisers create a space for their event in a minute. Attendees join with a link, tell Ayo what they&apos;re
-              looking for, and get a list of people worth saying hi to. Numbers are only swapped when both people say yes.
+              Find DevFest and GDG events in your cities, tell Ayo what you&apos;re looking for, and get a list of people
+              worth saying hi to. Numbers are only swapped when both people say yes.
             </p>
             <div className="row">
-              <Link className="btn btn--green" href={createHref}>Create your event</Link>
-              <Link className="btn btn--white" href={joinHref}>Join an event</Link>
+              <Link className="btn btn--green" href={joinHref}>Find events near you</Link>
+              <Link className="btn btn--white" href={createHref}>I&apos;m a GDG organiser</Link>
             </div>
           </div>
           <HeroNetwork />
@@ -39,9 +39,9 @@ export default async function Home() {
           <h2 className="h1" style={{ textAlign: "center" }}>How it works</h2>
           <div className="audiences">
             <div className="stack">
-              <p className="eyebrow">For organisers</p>
+              <p className="eyebrow">For GDG organisers</p>
               <ol className="steps__list steps__list--stack">
-                <Step n={1} color="var(--blue)" title="Create your event">Name, city, date. You get an invite link, a QR code and a join code.</Step>
+                <Step n={1} color="var(--blue)" title="Get approved, then create">Apply once with your chapter page. Then add an event: name, city, date. You get an invite link, QR code and join code.</Step>
                 <Step n={2} color="var(--red)" title="Put it on screen">One click opens a full-screen join slide for the projector between sessions.</Step>
                 <Step n={3} color="var(--green)" title="Keep it friendly">See who&apos;s joined and how many connections are being made, handle reports, and add co-organisers.</Step>
               </ol>
@@ -49,7 +49,7 @@ export default async function Home() {
             <div className="stack">
               <p className="eyebrow">For attendees</p>
               <ol className="steps__list steps__list--stack">
-                <Step n={1} color="var(--blue)" title="Make your badge once">Sign in with Google, then seven quick taps. Your badge comes with you to every event.</Step>
+                <Step n={1} color="var(--blue)" title="Pick your cities">Sign in with Google, make your badge once, and follow every city you go to events in.</Step>
                 <Step n={2} color="var(--yellow)" title="Ayo finds your people">Want a mentor? Ayo shows who&apos;s mentoring in your stack. Hiring? Ayo shows who&apos;s looking.</Step>
                 <Step n={3} color="var(--green)" title="Connect, then chat">Send a request or scan their badge. Once they accept, WhatsApp is one tap away.</Step>
               </ol>
@@ -75,8 +75,8 @@ export default async function Home() {
         <section className="wrap closing">
           <AyoSays mood="excited" size={120} side="below">See you at the next DevFest!</AyoSays>
           <div className="row" style={{ justifyContent: "center" }}>
-            <Link className="btn btn--green" href={createHref}>Create your event</Link>
-            <Link className="btn btn--white" href={joinHref}>Join an event</Link>
+            <Link className="btn btn--green" href={joinHref}>Find events near you</Link>
+            <Link className="btn btn--white" href={createHref}>I&apos;m a GDG organiser</Link>
           </div>
         </section>
       </main>

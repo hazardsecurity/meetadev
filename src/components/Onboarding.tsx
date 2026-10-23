@@ -7,12 +7,14 @@ import { saveProfile } from "@/lib/actions";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import type { ProfileInput } from "@/lib/validation";
 import { AyoSays, type Mood } from "./Ayo";
+import { CityInput } from "./CityInput";
 
 type Step = { key: string; say: (p: ProfileInput) => string; mood?: Mood; valid: (p: ProfileInput) => boolean };
 
 const STEPS: Step[] = [
   { key: "role", say: (p) => `Hey ${p.name.split(" ")[0]}! What do you do?`, mood: "wave", valid: (p) => !!p.role },
   { key: "level", say: () => "Where are you on your journey? No wrong answers.", valid: (p) => !!p.level },
+  { key: "cities", say: () => "Which cities do you go to events in? I'll show you what's happening there.", mood: "thinking", valid: (p) => p.cities.length > 0 },
   { key: "intents", say: () => "What are you hoping to get from events like this? Pick all that fit.", valid: (p) => p.intents.length > 0 },
   { key: "stack", say: () => "What do you work with, or want to learn? I'll match you with people who share it.", mood: "thinking", valid: () => true },
   { key: "about", say: () => "Give people a one-line hello so they know who to look out for.", valid: (p) => p.name.trim().length >= 2 },
@@ -21,7 +23,9 @@ const STEPS: Step[] = [
   { key: "links", say: () => "Last one! Public links people at your events can see. All optional.", mood: "excited", valid: () => true },
 ];
 
-export function Onboarding({ initial, editing, next }: { initial: ProfileInput; editing: boolean; next: string }) {
+export function Onboarding({ initial, editing, next, citySuggestions }: {
+  initial: ProfileInput; editing: boolean; next: string; citySuggestions: string[];
+}) {
   const [p, setP] = useState(initial);
   const [i, setI] = useState(0);
   const [dir, setDir] = useState(1);
@@ -87,6 +91,10 @@ export function Onboarding({ initial, editing, next }: { initial: ProfileInput; 
                   </button>
                 ))}
               </div>
+            )}
+
+            {step.key === "cities" && (
+              <CityInput value={p.cities} onChange={(c) => set("cities", c)} suggestions={citySuggestions} />
             )}
 
             {step.key === "intents" && (

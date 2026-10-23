@@ -120,3 +120,31 @@ CREATE TABLE IF NOT EXISTS event_bans (
 ALTER TABLE connection_requests ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE SET NULL;
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS reports_event_idx ON reports (event_id);
+
+-- ---------------------------------------------------------------------------
+-- Only approved GDG organisers can create events. People apply; a platform
+-- admin (ADMIN_EMAILS) approves.
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_create_events boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS organizer_requests (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  chapter_name text NOT NULL,
+  chapter_url  text NOT NULL,
+  city         text NOT NULL,
+  note         text NOT NULL DEFAULT '',
+  status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by  uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  reviewed_at  timestamptz
+);
+CREATE INDEX IF NOT EXISTS organizer_requests_status_idx ON organizer_requests (status, created_at);
+
+-- Discovery: attendees follow cities; events can be listed for discovery.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS cities text[] NOT NULL DEFAULT '{}';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS listed boolean NOT NULL DEFAULT true;
+CREATE INDEX IF NOT EXISTS events_city_idx ON events (lower(city));
+-- Organisers who already created events keep the right to create more.
+UPDATE users SET can_create_events = true
+ WHERE NOT can_create_events AND id IN (SELECT created_by FROM events WHERE created_by IS NOT NULL);

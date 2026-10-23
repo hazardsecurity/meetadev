@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentUser } from "./auth";
 import { pool, query } from "./db";
+import { tidyCity } from "./cities";
 import { eventBySlug, isBanned, membership, newJoinCode, slugifyEvent } from "./events";
+import { canCreateEvents } from "./organizers";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
 import type { FormState } from "./actions";
@@ -26,7 +28,7 @@ async function organised(slug: string) {
 
 const eventSchema = z.object({
   name: z.string().trim().min(3, "Give your event a name (at least 3 characters).").max(80),
-  city: z.string().trim().max(60),
+  city: z.string().trim().min(2, "Add the city, so people nearby can find your event.").max(60).transform(tidyCity),
   starts_on: z
     .string()
     .trim()
@@ -34,24 +36,31 @@ const eventSchema = z.object({
     .transform((v) => v || null),
   about: z.string().trim().max(400),
   require_code: z.boolean(),
+  listed: z.boolean(),
 });
 
 const field = (form: FormData, k: string) => String(form.get(k) ?? "");
+const echo = (form: FormData) => ({
+  name: field(form, "name"), city: field(form, "city"), starts_on: field(form, "starts_on"), about: field(form, "about"),
+  require_code: form.get("require_code") === "on" ? "on" : "", listed: form.get("listed") === "on" ? "on" : "",
+});
 
 // ---------------------------------------------------------------------------
 // Create / join / leave
 
 export async function createEvent(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await signedIn();
+  if (!(await canCreateEvents(me))) return { error: "Only approved GDG organisers can create events. Apply on this page first." };
   const parsed = eventSchema.safeParse({
     name: field(form, "name"),
     city: field(form, "city"),
     starts_on: field(form, "starts_on"),
     about: field(form, "about"),
     require_code: form.get("require_code") === "on",
+    listed: form.get("listed") === "on",
   });
-  if (!parsed.success) return { error: firstError(parsed.error) };
-  if (!(await allow(`create-event:${me.id}`, 5, 86_400))) return { error: "You've created 5 events today. Try again tomorrow." };
+  if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
+  if (!(await allow(`create-event:${me.id}`, 5, 86_400))) return { error: "You've created 5 events today. Try again tomorrow.", values: echo(form) };
 
   const e = parsed.data;
   const base = slugifyEvent(e.name);
@@ -66,9 +75,9 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
       slug = `${base}-${n}`;
     }
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO events (slug, name, city, starts_on, about, join_code, require_code, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), e.require_code, me.id],
+      `INSERT INTO events (slug, name, city, starts_on, about, join_code, require_code, listed, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), e.require_code, e.listed, me.id],
     );
     await client.query("INSERT INTO event_members (event_id, user_id, role) VALUES ($1, $2, 'organizer')", [rows[0].id, me.id]);
     await client.query("COMMIT");
@@ -131,11 +140,12 @@ export async function updateEvent(slug: string, _prev: FormState, form: FormData
     starts_on: field(form, "starts_on"),
     about: field(form, "about"),
     require_code: form.get("require_code") === "on",
+    listed: form.get("listed") === "on",
   });
-  if (!parsed.success) return { error: firstError(parsed.error) };
+  if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
   const e = parsed.data;
-  await query("UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, require_code = $6 WHERE id = $1", [
-    event.id, e.name, e.city, e.starts_on, e.about, e.require_code,
+  await query("UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, require_code = $6, listed = $7 WHERE id = $1", [
+    event.id, e.name, e.city, e.starts_on, e.about, e.require_code, e.listed,
   ]);
   revalidatePath("/", "layout");
   return { ok: "Saved." };

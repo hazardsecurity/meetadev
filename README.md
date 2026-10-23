@@ -8,15 +8,23 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 
 ## For organisers
 
-- **Create an event** at `/events/new`: name, city, date, welcome note. Anyone signed in can create one; they become its organiser.
+- **Only approved GDG organisers can create events.** At `/events/new`, anyone else sees an application form (chapter name, their chapter's page on gdg.community.dev, city). A platform admin reviews it at `/admin`.
+- **Create an event** once approved: name, city (required), date, welcome note. The creator becomes its organiser.
+- **Show in "Find events"** (on by default): people who follow the event's city see it at `/discover`.
 - **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code. "Show on screen" opens a full-screen join slide for the projector.
 - **Ask for the join code** (optional): people opening the plain event page must type the code; invite links still work. "Make a new code" retires the old one.
 - **Dashboard** at `/e/<slug>/manage`: people joined, connections made, mentors vs. people wanting one, reports, members.
 - **Members**: make co-organisers, remove someone (they can rejoin), or ban them from the event.
 - **Reports** filed by people at your event land in your dashboard.
 
+## For admins
+
+- Admins are set with `ADMIN_EMAILS` (comma-separated Google emails) in the environment. Nobody can make themselves an admin from inside the app.
+- `/admin`: approve or decline organiser applications, add an organiser by email, or revoke someone's right to create new events (their existing events stay).
+
 ## For attendees
 
+- **Follow cities**: during onboarding and on `/discover`, add every city you go to events in. "Find events" lists upcoming listed events in all of them. Anyone can search `/discover?city=Lagos` without signing in.
 - **One badge for every event**: role, level, what you're here for, stack, intro, private contact, public links.
 - **Events**: join with an invite link or a code; switch between events from the top bar. The directory, suggestions and requests are limited to people at the same event.
 - **"People you should meet"**: matches mentors with people who want a mentor, hiring with job hunting, co-founder with co-founder, shared stack, and so on. Every suggestion says why.
@@ -53,7 +61,7 @@ Without Google keys you can still test locally: set `ALLOW_DEV_LOGIN=1` in `.env
 
 1. Push to GitHub and import the repo in Vercel.
 2. Add a Neon Postgres database from the Vercel Marketplace. That sets `DATABASE_URL` / `DATABASE_URL_UNPOOLED`.
-3. Add the Google variables above.
+3. Add the Google variables above, and `ADMIN_EMAILS` with the Google email(s) of whoever approves organisers.
 4. Deploy. `prebuild` runs the migration on every deploy.
 
 ## Stack
@@ -64,7 +72,8 @@ Next.js 16 (App Router, Server Actions, `proxy.ts`), Postgres via `pg`, zod, Mot
 
 - Event logos or custom colours (every event uses the Google colours).
 - Deleting an event (organisers can leave, but the event stays).
-- Limiting who can create events. Anyone signed in can (5 per day each).
+- Email notifications (e.g. telling an organiser they were approved). They see it next time they open "Create an event".
+- A fixed list of cities. Cities are free text, tidied ("lagos " becomes "Lagos") and matched case-insensitively, with suggestions from cities that already have events.
 - Uploading a different profile photo (the Google photo is used, otherwise coloured initials).
 
 Not an official Google product. Google and DevFest are trademarks of Google LLC.

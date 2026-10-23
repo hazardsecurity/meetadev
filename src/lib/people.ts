@@ -74,8 +74,8 @@ export async function directory(viewerId: string, eventId: string, f: DirectoryF
 }
 
 export async function profileOf(userId: string) {
-  const rows = await query<PublicProfile & Contact & { listed: boolean; onboarded: boolean }>(
-    `SELECT ${PUBLIC_COLS}, p.whatsapp, p.phone, p.contact_email, p.listed, p.onboarded FROM profiles p WHERE p.user_id = $1`,
+  const rows = await query<PublicProfile & Contact & { listed: boolean; onboarded: boolean; cities: string[] }>(
+    `SELECT ${PUBLIC_COLS}, p.whatsapp, p.phone, p.contact_email, p.listed, p.onboarded, p.cities FROM profiles p WHERE p.user_id = $1`,
     [userId],
   );
   return rows[0] ?? null;

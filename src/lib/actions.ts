@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentUser, endSession, safeNext } from "./auth";
+import { tidyCities } from "./cities";
 import { query } from "./db";
 import { allow } from "./ratelimit";
 import { firstError, noteSchema, profileSchema, type ProfileInput } from "./validation";
 
-export type FormState = { error?: string; ok?: string };
+// `values` echoes what was submitted so a form can refill itself after an error
+// (React resets uncontrolled forms once an action finishes).
+export type FormState = { error?: string; ok?: string; values?: Record<string, string> };
 
 // ---------------------------------------------------------------------------
 // Accounts
@@ -33,7 +36,7 @@ export async function saveProfile(input: ProfileInput, next: string): Promise<Fo
   await query(
     `UPDATE profiles SET name = $2, headline = $3, bio = $4, role = $5, level = $6, intents = $7, stack = $8,
             whatsapp = $9, phone = $10, contact_email = $11, linkedin = $12, github = $13, x_handle = $14,
-            website = $15, listed = $16, onboarded = true, updated_at = now()
+            website = $15, listed = $16, cities = $17, onboarded = true, updated_at = now()
       WHERE user_id = $1`,
     [
       me.id, p.name, p.headline, p.bio, p.role, p.level, p.intents, p.stack,
@@ -43,6 +46,7 @@ export async function saveProfile(input: ProfileInput, next: string): Promise<Fo
       strip(p.x_handle, /^(https?:\/\/)?(www\.)?(x|twitter)\.com\//i).replace(/^@/, ""),
       p.website,
       p.listed,
+      tidyCities(p.cities),
     ],
   );
   revalidatePath("/", "layout");

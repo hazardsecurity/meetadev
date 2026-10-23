@@ -12,11 +12,12 @@ export type Event = {
   about: string;
   join_code: string;
   require_code: boolean;
+  listed: boolean;
 };
 
 export type MemberRole = "attendee" | "organizer";
 
-const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.require_code";
+const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.require_code, e.listed";
 
 // No 0/O/1/I so codes survive being read off a projector.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -139,4 +140,33 @@ export async function eventReports(eventId: string) {
       ORDER BY r.created_at DESC LIMIT 100`,
     [eventId],
   );
+}
+
+// ---------------------------------------------------------------------------
+// Discovery: listed events in the cities someone follows.
+
+export type DiscoverEvent = Event & { members: number; is_member: boolean };
+
+export async function eventsInCities(cities: string[], viewerId: string | null) {
+  if (!cities.length) return [];
+  return query<DiscoverEvent>(
+    `SELECT ${EVENT_COLS},
+            (SELECT count(*)::int FROM event_members x WHERE x.event_id = e.id) AS members,
+            EXISTS (SELECT 1 FROM event_members x WHERE x.event_id = e.id AND x.user_id = $2) AS is_member
+       FROM events e
+      WHERE e.listed AND lower(e.city) = ANY($1::text[])
+        AND (e.starts_on IS NULL OR e.starts_on >= current_date - 1)
+      ORDER BY e.starts_on ASC NULLS LAST, e.created_at DESC
+      LIMIT 100`,
+    [cities.map((c) => c.toLowerCase()), viewerId],
+  );
+}
+
+/** Cities that have listed events, most active first, for suggestions. */
+export async function knownCities() {
+  const rows = await query<{ city: string }>(
+    `SELECT min(city) AS city FROM events WHERE listed AND city <> ''
+      GROUP BY lower(city) ORDER BY count(*) DESC, min(city) LIMIT 200`,
+  );
+  return rows.map((r) => r.city);
 }

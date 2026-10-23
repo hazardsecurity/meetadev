@@ -13,9 +13,9 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
   return (
     <Celebrate
       first={me.name.split(" ")[0]}
-      line={event ? `Next stop: ${event.name}. Let's see who's there.` : "Your badge works at every event. Join one to start meeting people."}
-      cta={event ? `Go to ${event.name}` : "Find my event"}
-      next={next}
+      line={event ? `Next stop: ${event.name}. Let's see who's there.` : "Your badge works at every event. Let's find one in your city."}
+      cta={event ? `Go to ${event.name}` : "Find events near me"}
+      next={event ? next : "/discover"}
     />
   );
 }

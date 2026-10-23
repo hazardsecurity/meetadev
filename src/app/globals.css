@@ -385,3 +385,7 @@ h1, h2, h3, p { margin: 0; }
 .audiences { display: grid; gap: 28px; }
 @media (min-width: 900px) { .audiences { grid-template-columns: 1fr 1fr; } }
 .steps__list--stack { grid-template-columns: 1fr !important; }
+.city-chip { padding-right: 4px; }
+.city-chip button { border: 0; background: none; cursor: pointer; color: inherit; font-size: 0.75rem; padding: 2px 6px; border-radius: 999px; }
+.city-chip button:hover { background: rgb(0 0 0 / 0.06); }
+.application { display: grid; gap: 8px; padding: 14px; border: 2px solid var(--line-soft); border-radius: 16px; }
