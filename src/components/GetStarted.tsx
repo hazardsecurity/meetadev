@@ -29,7 +29,9 @@ const SLIDES: Slide[] = [
     art: () => <ArtPodium />,
   },
 ];
-const LAST = SLIDES.length; // the final "who are you?" step
+const LAST = SLIDES.length - 1;
+// Finishing (or skipping) the intro remembers it was seen, then opens the homepage.
+const DONE = "/api/start?choice=browse";
 
 export function GetStarted() {
   const [[index, dir], setPage] = useState<[number, number]>([0, 1]);
@@ -61,7 +63,7 @@ export function GetStarted() {
     <main className="intro">
       <header className="intro__top">
         <span className="intro__brand"><BrandMark size={26} /><strong>meetadev</strong></span>
-        {index < LAST && <button className="intro__skip" onClick={() => go(LAST)}>Skip</button>}
+        {index < LAST && <a className="intro__skip" href={DONE}>Skip</a>}
       </header>
 
       <AnimatePresence mode="wait" custom={dir} initial={false}>
@@ -81,36 +83,11 @@ export function GetStarted() {
           aria-roledescription="slide"
           aria-label={`${index + 1} of ${LAST + 1}`}
         >
-          <div className="intro__art">{slide ? slide.art() : <ArtChoose />}</div>
+          <div className="intro__art">{slide.art()}</div>
           <div className="intro__copy">
             <p className="eyebrow">{index + 1} of {LAST + 1}</p>
-            {slide ? (
-              <>
-                <h1 className={index === 0 ? "display intro__title" : "h1 intro__title"}>{slide.title}</h1>
-                <p className="lead">{slide.body}</p>
-              </>
-            ) : (
-              <>
-                <h1 className="h1 intro__title">Who are you here as?</h1>
-                <div className="intro__choices">
-                  <a href="/api/start?choice=attend" className="start__option start__option--blue">
-                    <span className="start__emoji" aria-hidden>🎟️</span>
-                    <span><strong>I&apos;m attending</strong><span className="start__hint">Find events in your city and the people worth meeting</span></span>
-                    <span className="start__arrow" aria-hidden>→</span>
-                  </a>
-                  <a href="/api/start?choice=organise" className="start__option start__option--green">
-                    <span className="start__emoji" aria-hidden>🎤</span>
-                    <span><strong>I&apos;m organising</strong><span className="start__hint">Set up your GDG chapter&apos;s event</span></span>
-                    <span className="start__arrow" aria-hidden>→</span>
-                  </a>
-                </div>
-                <p className="start__links">
-                  <a href="/api/start?choice=code">I have a join code</a>
-                  <span aria-hidden>·</span>
-                  <a href="/api/start?choice=browse">Just looking around</a>
-                </p>
-              </>
-            )}
+            <h1 className={index === 0 ? "display intro__title" : "h1 intro__title"}>{slide.title}</h1>
+            <p className="lead">{slide.body}</p>
           </div>
         </motion.section>
       </AnimatePresence>
@@ -124,8 +101,10 @@ export function GetStarted() {
         </div>
         <div className="intro__nav">
           {index > 0 && <button className="btn btn--white" onClick={() => go(index - 1)}>Back</button>}
-          {index < LAST && (
-            <button className="btn intro__next" onClick={() => go(index + 1)}>{index === LAST - 1 ? "Get started" : "Next"}</button>
+          {index < LAST ? (
+            <button className="btn intro__next" onClick={() => go(index + 1)}>Next</button>
+          ) : (
+            <a className="btn intro__next" href={DONE}>Get started</a>
           )}
         </div>
       </footer>
@@ -228,18 +207,6 @@ function ArtPodium() {
             <span className="podium__block">{p.rank}</span>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ArtChoose() {
-  return (
-    <div className="art">
-      <Ayo mood="thinking" size={140} />
-      <div className="art__row">
-        <span className="chip chip--blue">🎟️ Attending</span>
-        <span className="chip chip--green">🎤 Organising</span>
       </div>
     </div>
   );
