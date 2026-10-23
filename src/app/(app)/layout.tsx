@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { Logo } from "@/components/Logo";
@@ -5,6 +6,9 @@ import { Nav } from "@/components/Nav";
 import { currentUser } from "@/lib/auth";
 import { eventBySlug, membership } from "@/lib/events";
 import { counts } from "@/lib/people";
+
+// Signed-in screens stay out of search; public event pages opt back in.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 // Shell for the signed-in screens. Each page still checks access itself.
 export default async function AppLayout({ children }: LayoutProps<"/">) {

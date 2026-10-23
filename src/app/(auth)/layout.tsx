@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { Logo } from "@/components/Logo";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (

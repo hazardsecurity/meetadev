@@ -2,7 +2,25 @@ import Link from "next/link";
 import { AyoSays } from "@/components/Ayo";
 import { HeroNetwork } from "@/components/HeroNetwork";
 import { Logo } from "@/components/Logo";
+import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
+import { jsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} · Meet the people you came to meet at DevFest` },
+  alternates: { canonical: "/" },
+};
+
+const STRUCTURED = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebSite", "@id": `${SITE_URL}/#website`, url: SITE_URL, name: SITE_NAME, description: SITE_DESCRIPTION, inLanguage: "en" },
+    {
+      "@type": "WebApplication", "@id": `${SITE_URL}/#app`, name: SITE_NAME, url: SITE_URL, applicationCategory: "SocialNetworkingApplication",
+      operatingSystem: "Any", description: SITE_DESCRIPTION, offers: { "@type": "Offer", price: "0", priceCurrency: "NGN" },
+    },
+  ],
+};
 
 export default async function Home() {
   const me = await currentUser();
@@ -16,6 +34,7 @@ export default async function Home() {
         <Link className="btn btn--white btn--sm" href={me ? "/events" : "/login"}>{me ? "Open meetadev" : "Sign in with Google"}</Link>
       </header>
 
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(STRUCTURED)} />
       <main>
         <section className="wrap hero">
           <div className="stack hero__copy" style={{ "--gap": "20px" } as React.CSSProperties}>

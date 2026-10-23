@@ -9,14 +9,38 @@ import { currentUser } from "@/lib/auth";
 import { eventBySlug, isBanned, memberCount, membership, type Event } from "@/lib/events";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import { directory, profileOf, suggestions } from "@/lib/people";
+import { jsonLd, noindex, SITE_URL } from "@/lib/site";
+
+// schema.org Event, so listed DevFest events can show in Google's event results.
+function eventLd(e: Event) {
+  if (!e.listed || !e.starts_on) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: e.name,
+    startDate: e.starts_on,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    description: e.about || `Developer community event${e.city ? ` in ${e.city}` : ""}.`,
+    url: `${SITE_URL}/e/${e.slug}`,
+    location: { "@type": "Place", name: e.city, address: { "@type": "PostalAddress", addressLocality: e.city } },
+    organizer: { "@type": "Organization", name: e.name.replace(/\s+\d{4}$/, ""), url: `${SITE_URL}/e/${e.slug}` },
+  };
+}
 
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v.slice(0, 80) : "");
 
 export async function generateMetadata({ params }: PageProps<"/e/[slug]">): Promise<Metadata> {
   const event = await eventBySlug((await params).slug);
-  return event
-    ? { title: event.name, description: `Find the people you should meet at ${event.name}.`, robots: { index: false } }
-    : { title: "Event not found" };
+  if (!event) return { title: "Event not found", ...noindex };
+  const where = event.city ? ` in ${event.city}` : "";
+  return {
+    title: event.name,
+    description: event.about || `Join ${event.name}${where} on meetadev and find the people you should meet: mentors, learners, collaborators and teams that are hiring.`,
+    alternates: { canonical: `/e/${event.slug}` },
+    // Organisers who hide an event from "Find events" keep it out of Google too.
+    robots: event.listed ? { index: true, follow: true } : { index: false, follow: false },
+  };
 }
 
 export default async function EventPage({ params, searchParams }: PageProps<"/e/[slug]">) {
@@ -59,8 +83,10 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
           needsCode={event.require_code && code !== event.join_code} code={code} />
       );
     }
+    const ld = eventLd(event);
     return (
       <div className="event-join">
+        {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
         <EventHeader event={event} members={count} />
         {action}
       </div>

@@ -1,16 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { Google_Sans, Google_Sans_Code } from "next/font/google";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const sans = Google_Sans({ variable: "--font-google-sans", subsets: ["latin"] });
 const code = Google_Sans_Code({ variable: "--font-google-sans-code", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
-  applicationName: "meetadev",
-  title: { default: "meetadev", template: "%s · meetadev" },
-  description:
-    "Organisers create a space for their DevFest or GDG event; attendees find mentors, learners, collaborators and teams that are hiring. Contacts are only swapped when both people say yes.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  openGraph: { siteName: SITE_NAME, type: "website", locale: "en_NG" },
+  twitter: { card: "summary_large_image" },
+  // Search Console "HTML tag" verification: set GOOGLE_SITE_VERIFICATION to the content="" value.
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export const viewport: Viewport = { themeColor: "#ffffff" };

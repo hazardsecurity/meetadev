@@ -3,7 +3,7 @@ import { Celebrate } from "@/components/Celebrate";
 import { requireMember, safeNext } from "@/lib/auth";
 import { eventBySlug } from "@/lib/events";
 
-export const metadata: Metadata = { title: "Welcome" };
+export const metadata: Metadata = { title: "Welcome", robots: { index: false, follow: false } };
 
 export default async function WelcomePage({ searchParams }: PageProps<"/welcome">) {
   const next = safeNext((await searchParams).next);

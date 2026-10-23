@@ -6,7 +6,7 @@ import { knownCities } from "@/lib/events";
 import { profileOf } from "@/lib/people";
 import type { ProfileInput } from "@/lib/validation";
 
-export const metadata: Metadata = { title: "Your badge" };
+export const metadata: Metadata = { title: "Your badge", robots: { index: false, follow: false } };
 
 export default async function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   const next = safeNext((await searchParams).next);
