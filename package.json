@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node --env-file-if-exists=.env.local scripts/migrate.mjs --if-configured",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/migrate.mjs --if-configured && node --env-file-if-exists=.env.local scripts/import-communities.mjs db/seed/communities.tsv --once=faaji-2026-10 --if-configured",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
