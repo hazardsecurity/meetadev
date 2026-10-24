@@ -1,6 +1,6 @@
 import "server-only";
 import { query } from "./db";
-import { intent, roleLabel } from "./options";
+import { roleLabel } from "./options";
 
 export type PublicProfile = {
   user_id: string;
@@ -203,8 +203,4 @@ export async function suggestions(me: PublicProfile, eventId: string, limit = 6)
     .filter((s): s is Suggestion => s !== null)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
-}
-
-export function intentChips(p: { intents: string[] }) {
-  return p.intents.map((id) => intent(id)).filter((i) => i !== undefined);
 }

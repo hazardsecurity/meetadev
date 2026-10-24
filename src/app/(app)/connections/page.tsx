@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
+import { Ticks } from "@/components/ChatThread";
 import { roleLine } from "@/components/Chips";
 import { LocalTime } from "@/components/LocalTime";
 import { PushToggle } from "@/components/PushToggle";
@@ -58,10 +58,7 @@ export default async function ChatsPage() {
                       </span>
                       <span className="chats__preview">
                         {s?.last_from_me && (
-                          <span className={`chat-row__ticks ticks--${s.last_read ? "read" : s.last_delivered ? "delivered" : "sent"}`}
-                            title={s.last_read ? "Read" : s.last_delivered ? "Delivered" : "Sent"}>
-                            {s.last_delivered || s.last_read ? <CheckCheck size={15} strokeWidth={2.6} aria-hidden /> : <Check size={15} strokeWidth={2.6} aria-hidden />}
-                          </span>
+                          <Ticks delivered={s.last_delivered} read={s.last_read} prefix="You, " className="chat-row__ticks" />
                         )}
                         {s ? s.last_body : c.headline || roleLine(c.role, c.level) || "Say hi 👋"}
                       </span>

@@ -2,6 +2,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import { cache } from "react";
 import { query } from "./db";
+import { slugify } from "./format";
 
 export type Event = {
   id: string;
@@ -11,28 +12,19 @@ export type Event = {
   starts_on: string | null;
   about: string;
   join_code: string;
-  require_code: boolean;
   listed: boolean;
   community_id: string | null;
 };
 
 export type MemberRole = "attendee" | "organizer";
 
-const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.require_code, e.listed, e.community_id";
+const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.listed, e.community_id";
 
 // No 0/O/1/I so codes survive being read off a projector.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const newJoinCode = () => Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
 
-export function slugifyEvent(name: string) {
-  const base = name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-  return base || "event";
-}
+export const slugifyEvent = (name: string) => slugify(name, 40) || "event";
 
 export const eventBySlug = cache(async (slug: string) => {
   const rows = await query<Event>(`SELECT ${EVENT_COLS} FROM events e WHERE e.slug = $1`, [slug]);
@@ -89,16 +81,6 @@ export async function allEvents() {
 export async function memberCount(eventId: string) {
   const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1", [eventId]);
   return rows[0].n;
-}
-
-/** Do these two people share at least one event? Requests are only allowed between them. */
-export async function shareAnEvent(a: string, b: string) {
-  const rows = await query(
-    `SELECT 1 FROM event_members x JOIN event_members y ON x.event_id = y.event_id
-      WHERE x.user_id = $1 AND y.user_id = $2 LIMIT 1`,
-    [a, b],
-  );
-  return rows.length > 0;
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { currentUser } from "./auth";
-import { canChat, markRead, type Message } from "./chat";
+import { canChat, iso, type Message } from "./chat";
 import { query } from "./db";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
@@ -17,7 +17,7 @@ export async function sendMessage(toUserId: string, raw: string): Promise<{ erro
 
   const rows = await query<Message>(
     `INSERT INTO messages (from_user, to_user, body) VALUES ($1, $2, $3)
-     RETURNING id, from_user, body, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, NULL AS delivered_at, NULL AS read_at`,
+     RETURNING id, from_user, body, ${iso("created_at")} AS created_at, NULL AS delivered_at, NULL AS read_at`,
     [me.id, toUserId, body],
   );
   await notify(toUserId, {
@@ -28,10 +28,4 @@ export async function sendMessage(toUserId: string, raw: string): Promise<{ erro
   });
   revalidatePath("/connections");
   return { message: rows[0] };
-}
-
-export async function readThread(otherId: string) {
-  const me = await currentUser();
-  if (!me) return;
-  await markRead(me.id, otherId);
 }

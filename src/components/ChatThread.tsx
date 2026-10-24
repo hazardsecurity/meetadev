@@ -2,16 +2,18 @@
 
 import { Check, CheckCheck, Clock3, SendHorizontal } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import type { Message, Receipt } from "@/lib/chat";
 import { sendMessage } from "@/lib/chat-actions";
 import { AyoSays } from "./Ayo";
+import { CHECK_INBOX } from "./InboxPulse";
 import { LocalTime } from "./LocalTime";
 import { PushToggle } from "./PushToggle";
 
-type Msg = { id: string; from_user: string; body: string; created_at: string; delivered_at: string | null; read_at: string | null; pending?: boolean };
-type Receipt = { id: string; delivered_at: string | null; read_at: string | null };
+type Msg = Message & { pending?: boolean };
 
 // Day boundaries in UTC are only for grouping; labels are shown in local time.
 const dayKey = (iso: string) => iso.slice(0, 10);
+const byTime = (a: Msg, b: Msg) => a.created_at.localeCompare(b.created_at);
 
 export function ChatThread({ me, other, firstName, initial }: { me: string; other: string; firstName: string; initial: Msg[] }) {
   const [messages, setMessages] = useState<Msg[]>(initial);
@@ -19,6 +21,7 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
   const [error, setError] = useState("");
   const [, start] = useTransition();
   const end = useRef<HTMLDivElement>(null);
+  // Only moved by polls: a reply saved just before our own send must still be fetched.
   const latest = useRef(initial.at(-1)?.created_at);
 
   // Braces matter: newer browsers return a Promise from scrollIntoView, and an
@@ -34,6 +37,8 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
     if (!res.ok) return;
     const { messages: fresh, receipts = [] } = (await res.json()) as { messages: Msg[]; receipts?: Receipt[] };
     if (fresh.length) latest.current = fresh.at(-1)!.created_at;
+    // The server just marked these read, so the Chats badge can drop now.
+    if (fresh.some((m) => m.from_user === other && !m.read_at)) window.dispatchEvent(new Event(CHECK_INBOX));
     const ticks = new Map(receipts.map((r) => [r.id, r]));
     setMessages((list) => {
       const known = new Set(list.map((m) => m.id));
@@ -44,11 +49,16 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
       });
       const added = fresh.filter((m) => !known.has(m.id));
       if (!added.length && updated.every((m, n) => m === list[n])) return list;
-      // A sending bubble gives way only to its own copy coming back from the server.
-      const kept = updated.filter((m) => !m.pending || !added.some((a) => a.from_user === m.from_user && a.body === m.body));
-      return [...kept, ...added].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      // Each of my messages coming back from the server replaces one sending bubble with the same text.
+      const back = added.filter((a) => a.from_user === me).map((a) => a.body);
+      const kept = updated.filter((m) => {
+        const i = m.pending ? back.indexOf(m.body) : -1;
+        if (i >= 0) back.splice(i, 1);
+        return i < 0;
+      });
+      return [...kept, ...added].sort(byTime);
     });
-  }, [other]);
+  }, [me, other]);
 
   useEffect(() => {
     const timer = setInterval(poll, 3000);
@@ -73,12 +83,8 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
         setDraft(body);
         return;
       }
-      latest.current = res.message.created_at > (latest.current ?? "") ? res.message.created_at : latest.current;
       const sent = res.message;
-      setMessages((list) => {
-        if (list.some((m) => m.id === sent.id)) return list.filter((m) => m.id !== temp.id);
-        return list.some((m) => m.id === temp.id) ? list.map((m) => (m.id === temp.id ? sent : m)) : [...list, sent];
-      });
+      setMessages((list) => [...list.filter((m) => m.id !== temp.id && m.id !== sent.id), sent].sort(byTime));
     });
   };
 
@@ -97,7 +103,10 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
               {newDay && <p className="chat__day"><LocalTime iso={m.created_at} format="day" /></p>}
               <div className={`msg ${mine ? "msg--me" : "msg--them"} ${m.pending ? "is-pending" : ""}`}>
                 <p>{m.body}</p>
-                <span className="msg__meta"><LocalTime iso={m.created_at} format="time" />{mine && <Ticks m={m} />}</span>
+                <span className="msg__meta">
+                  <LocalTime iso={m.created_at} format="time" />
+                  {mine && <Ticks pending={m.pending} delivered={!!m.delivered_at} read={!!m.read_at} />}
+                </span>
               </div>
             </div>
           );
@@ -115,19 +124,21 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
   );
 }
 
-/** One tick: sent. Two: delivered to their app. Two yellow: they've read it. */
-function Ticks({ m }: { m: Msg }) {
-  const [Icon, state, label] = m.pending
+/** One tick: sent. Two: delivered to their app. Two blue on white: they've read it.
+ *  The state is an aria-label, not text, so the chat's live region doesn't read every change aloud. */
+export function Ticks({ pending = false, delivered, read, prefix = "", className = "ticks" }: {
+  pending?: boolean; delivered: boolean; read: boolean; prefix?: string; className?: string;
+}) {
+  const [Icon, state, label] = pending
     ? [Clock3, "sending", "Sending"]
-    : m.read_at
+    : read
       ? [CheckCheck, "read", "Read"]
-      : m.delivered_at
+      : delivered
         ? [CheckCheck, "delivered", "Delivered"]
         : [Check, "sent", "Sent"];
   return (
-    <span className={`ticks ticks--${state}`} title={label}>
+    <span className={`${className} ticks--${state}`} title={label} role="img" aria-label={prefix + label}>
       <Icon size={15} strokeWidth={2.6} aria-hidden />
-      <span className="sr-only">{label}</span>
     </span>
   );
 }

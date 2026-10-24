@@ -619,14 +619,17 @@ h1, h2, h3, p { margin: 0; }
 .msg__meta { display: inline-flex; align-items: center; gap: 4px; }
 .ticks { display: inline-flex; line-height: 0; transition: color 0.2s ease, opacity 0.2s ease; }
 .ticks--sending, .ticks--sent, .ticks--delivered { opacity: 0.8; }
-.ticks--read { color: var(--yellow); opacity: 1; }
+.ticks--read { opacity: 1; }
+/* Read gets a white pill, not just a colour, so it differs from delivered for everyone. */
+.msg .ticks--read { color: var(--blue); background: #fff; border-radius: 999px; padding: 1px 3px; }
 .chat-row__ticks { display: inline-flex; vertical-align: -3px; margin-right: 4px; color: var(--muted); }
 .chat-row__ticks.ticks--read { color: var(--blue); }
 
 /* ---------- typing on a phone ---------- */
-/* While a text field has focus the on-screen keyboard is up: hide the tab bar
-   so it doesn't ride on top of the keyboard, and let the chat box sit low. */
-@media (max-width: 759px) {
+/* While a text field has focus on a touch screen the on-screen keyboard is up: hide
+   the tab bar so it doesn't ride on top of the keyboard, and let the chat box sit low.
+   Nav blurs the field when Android's Back button closes the keyboard. */
+@media (max-width: 759px) and (pointer: coarse) {
   body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .tabbar { display: none; }
   body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .chat__composer { bottom: 0; }
 }

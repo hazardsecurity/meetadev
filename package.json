@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
     "migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "seed:demo": "node --env-file-if-exists=.env.local scripts/seed-demo.mjs"
   },

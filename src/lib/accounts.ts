@@ -1,23 +1,17 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { pool } from "./db";
+import { slugify } from "./format";
 
-function slugify(name: string) {
-  const base = name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 20);
-  return `${base || "dev"}-${randomBytes(3).toString("hex").slice(0, 4)}`;
-}
+const newHandle = (name: string) => `${slugify(name, 20) || "dev"}-${randomBytes(3).toString("hex").slice(0, 4)}`;
 
 export type Identity = { sub: string; email: string; name: string; picture: string };
 
-/** Existing account for this Google identity (by Google ID, then by verified email), or null. */
+/** Existing account for this Google identity, or null. Email only claims an account not yet tied to
+ *  a Google ID: a work email can be given to someone new, and they mustn't get the old owner's account. */
 export async function findAccount(identity: Identity) {
   const { rows } = await pool().query<{ id: string; google_sub: string | null }>(
-    "SELECT id, google_sub FROM users WHERE google_sub = $1 OR lower(email) = $2 ORDER BY (google_sub = $1) DESC NULLS LAST LIMIT 1",
+    "SELECT id, google_sub FROM users WHERE google_sub = $1 OR (google_sub IS NULL AND lower(email) = $2) ORDER BY (google_sub = $1) DESC NULLS LAST LIMIT 1",
     [identity.sub, identity.email],
   );
   const user = rows[0];
@@ -38,7 +32,7 @@ export async function createAccount(identity: Identity) {
     );
     await client.query(
       "INSERT INTO profiles (user_id, handle, name, photo_url, contact_email, color) VALUES ($1, $2, $3, $4, $5, $6)",
-      [rows[0].id, slugify(identity.name), identity.name.slice(0, 60), identity.picture, identity.email, Math.floor(Math.random() * 4)],
+      [rows[0].id, newHandle(identity.name), identity.name.slice(0, 60), identity.picture, identity.email, Math.floor(Math.random() * 4)],
     );
     await client.query("COMMIT");
     return rows[0].id;

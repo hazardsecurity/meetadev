@@ -4,7 +4,10 @@ import { query } from "./db";
 export type Message = { id: string; from_user: string; body: string; created_at: string; delivered_at: string | null; read_at: string | null };
 export type Receipt = { id: string; delivered_at: string | null; read_at: string | null };
 
-const iso = (col: string) => `to_char(${col} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+export const iso = (col: string) => `to_char(${col} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+
+// One conversation, written to match messages_pair_idx so polls don't scan every message.
+const PAIR = "LEAST(from_user, to_user) = LEAST($1::uuid, $2::uuid) AND GREATEST(from_user, to_user) = GREATEST($1::uuid, $2::uuid)";
 
 /** Accepted connection and nobody blocked anybody: the only case where chat is allowed. */
 export async function canChat(a: string, b: string) {
@@ -22,11 +25,11 @@ export async function thread(me: string, other: string, after?: string) {
   let since = "";
   if (after) { params.push(after); since = "AND created_at > $3"; }
   const rows = await query<Message>(
-    `SELECT id, from_user, body, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+    `SELECT id, from_user, body, ${iso("created_at")} AS created_at,
             ${iso("delivered_at")} AS delivered_at, ${iso("read_at")} AS read_at
        FROM messages
-      WHERE ((from_user = $1 AND to_user = $2) OR (from_user = $2 AND to_user = $1)) ${since}
-      ORDER BY created_at DESC LIMIT 200`,
+      WHERE ${PAIR} ${since}
+      ORDER BY messages.created_at DESC LIMIT 200`,
     params,
   );
   return rows.reverse();
@@ -48,7 +51,7 @@ export async function markDelivered(me: string) {
 export async function receipts(me: string, other: string) {
   return query<Receipt>(
     `SELECT id, ${iso("delivered_at")} AS delivered_at, ${iso("read_at")} AS read_at
-       FROM messages WHERE from_user = $1 AND to_user = $2
+       FROM messages WHERE ${PAIR} AND from_user = $1
       ORDER BY created_at DESC LIMIT 100`,
     [me, other],
   );

@@ -12,7 +12,7 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 - **Create an event** once approved: name, city (required), date, welcome note. The creator becomes its organiser.
 - **Show in "Find events"** (on by default): people who follow the event's city see it at `/discover`.
 - **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code. "Show on screen" opens a full-screen join slide for the projector.
-- **Ask for the join code** (optional): people opening the plain event page must type the code; invite links still work. "Make a new code" retires the old one.
+- **Joining is open**: anyone signed in can join from the event page. The invite link and code are shortcuts, not a lock. "Make a new code" stops the old code working.
 - **Dashboard** at `/e/<slug>/manage`: people joined, connections made, mentors vs. people wanting one, reports, members.
 - **Members**: make co-organisers, remove someone (they can rejoin), or ban them from the event.
 - **Reports** filed by people at your event land in your dashboard.
