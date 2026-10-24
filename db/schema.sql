@@ -163,6 +163,11 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS messages_pair_idx ON messages (LEAST(from_user, to_user), GREATEST(from_user, to_user), created_at DESC);
 CREATE INDEX IF NOT EXISTS messages_unread_idx ON messages (to_user) WHERE read_at IS NULL;
 
+-- Delivered = it reached their app (any open meetadev tab); read = they opened the chat.
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
+UPDATE messages SET delivered_at = read_at WHERE delivered_at IS NULL AND read_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS messages_undelivered_idx ON messages (to_user) WHERE delivered_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   endpoint   text PRIMARY KEY,
   user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

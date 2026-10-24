@@ -88,8 +88,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
       );
     } else {
       action = (
-        <JoinEvent slug={slug} name={event.name} firstName={(me.name ?? "").split(" ")[0]}
-          needsCode={event.require_code && code !== event.join_code} code={code} />
+        <JoinEvent slug={slug} name={event.name} firstName={(me.name ?? "").split(" ")[0]} />
       );
     }
     const ld = eventLd(event);

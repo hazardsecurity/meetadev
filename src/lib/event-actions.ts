@@ -105,13 +105,12 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
   redirect(`/e/${slug}/manage?created=1`);
 }
 
-export async function joinEvent(slug: string, code: string): Promise<FormState> {
+/** Events are open: anyone signed in can join from the page. The code is only a shortcut. */
+export async function joinEvent(slug: string): Promise<FormState> {
   const me = await signedIn();
   const event = await eventBySlug(slug);
   if (!event) return { error: "That event doesn't exist any more." };
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
-  if (event.require_code && code.trim().toUpperCase() !== event.join_code)
-    return { error: "That join code isn't right. Ask an organiser, or check the screens at the venue." };
   if (!(await allow(`join:${me.id}`, 30, 3600))) return { error: "Slow down a little and try again in a few minutes." };
   await query("INSERT INTO event_members (event_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [event.id, me.id]);
   revalidatePath("/", "layout");
@@ -126,7 +125,7 @@ export async function joinByCode(_prev: FormState, form: FormData): Promise<Form
   if (!(await allow(`join-code:${(await signedIn()).id}`, 20, 3600))) return { error: "Too many tries. Wait a bit and try again." };
   const rows = await query<{ slug: string }>("SELECT slug FROM events WHERE join_code = $1", [code]);
   if (!rows[0]) return { error: "No event has that code. Check it with an organiser." };
-  return joinEvent(rows[0].slug, code);
+  return joinEvent(rows[0].slug);
 }
 
 export async function leaveEvent(slug: string): Promise<FormState> {

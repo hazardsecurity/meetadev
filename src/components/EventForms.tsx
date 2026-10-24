@@ -52,15 +52,6 @@ export function EventForm({ event, communities = [] }: { event?: Event; communit
           <span className="hint"> People who follow your city will see this event and can open its page.</span>
         </span>
       </label>
-      <label className="check">
-        <input type="checkbox" name="require_code" defaultChecked={v ? v.require_code === "on" : (event?.require_code ?? false)} />
-        <span>
-          <strong>Ask for the join code</strong>
-          <span className="hint">
-            {" "}Invite links still work without typing it. Turn this on if the event page link might leak beyond your attendees.
-          </span>
-        </span>
-      </label>
       {state.error && <p className="error" role="alert">{state.error}</p>}
       {state.ok && <p className="success" role="status">{state.ok}</p>}
       <button className="btn btn--green" disabled={pending}>{pending ? "Saving…" : event ? "Save changes" : "Create event"}</button>

@@ -614,3 +614,21 @@ h1, h2, h3, p { margin: 0; }
 .admin-events { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 .admin-events li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 2px solid var(--line-soft); }
 .admin-events li:last-child { border-bottom: 0; }
+
+/* ---------- message ticks ---------- */
+.msg__meta { display: inline-flex; align-items: center; gap: 4px; }
+.ticks { display: inline-flex; line-height: 0; transition: color 0.2s ease, opacity 0.2s ease; }
+.ticks--sending, .ticks--sent, .ticks--delivered { opacity: 0.8; }
+.ticks--read { color: var(--yellow); opacity: 1; }
+.chat-row__ticks { display: inline-flex; vertical-align: -3px; margin-right: 4px; color: var(--muted); }
+.chat-row__ticks.ticks--read { color: var(--blue); }
+
+/* ---------- typing on a phone ---------- */
+/* While a text field has focus the on-screen keyboard is up: hide the tab bar
+   so it doesn't ride on top of the keyboard, and let the chat box sit low. */
+@media (max-width: 759px) {
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .tabbar { display: none; }
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .chat__composer { bottom: 0; }
+}
+.msg__meta { opacity: 1; }
+.msg__meta > :not(.ticks) { opacity: 0.75; }

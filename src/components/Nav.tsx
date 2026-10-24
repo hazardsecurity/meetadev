@@ -3,6 +3,8 @@
 import { IdCard, Inbox, MessageCircle, Trophy, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { UNREAD_EVENT } from "./InboxPulse";
 
 type Tab = { key: string; label: string; Icon: LucideIcon; tone: "blue" | "red" | "green" | "yellow" };
 
@@ -16,6 +18,14 @@ const TABS: Tab[] = [
 
 export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { incoming: number; unread?: number; peopleHref: string; className?: string }) {
   const path = usePathname();
+  // The layout's count is from page load; InboxPulse keeps it fresh.
+  const [live, setLive] = useState<number | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setLive((e as CustomEvent<number>).detail);
+    window.addEventListener(UNREAD_EVENT, on);
+    return () => window.removeEventListener(UNREAD_EVENT, on);
+  }, []);
+  const unreadNow = live ?? unread;
   const href = (key: string) =>
     ({
       people: peopleHref,
@@ -39,11 +49,11 @@ export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { i
           <span className="tab__icon" aria-hidden>
             <Icon size={20} strokeWidth={2.4} />
             {key === "requests" && incoming > 0 && <span className="badge-count tab__badge">{incoming > 9 ? "9+" : incoming}</span>}
-            {key === "contacts" && unread > 0 && <span className="badge-count tab__badge">{unread > 9 ? "9+" : unread}</span>}
+            {key === "contacts" && unreadNow > 0 && <span className="badge-count tab__badge">{unreadNow > 9 ? "9+" : unreadNow}</span>}
           </span>
           <span className="tab__label">{label}</span>
           {key === "requests" && incoming > 0 && <span className="sr-only">, {incoming} new</span>}
-          {key === "contacts" && unread > 0 && <span className="sr-only">, {unread} unread</span>}
+          {key === "contacts" && unreadNow > 0 && <span className="sr-only">, {unreadNow} unread</span>}
         </Link>
       ))}
     </nav>

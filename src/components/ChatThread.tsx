@@ -1,13 +1,14 @@
 "use client";
 
-import { SendHorizontal } from "lucide-react";
+import { Check, CheckCheck, Clock3, SendHorizontal } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { sendMessage } from "@/lib/chat-actions";
 import { AyoSays } from "./Ayo";
 import { LocalTime } from "./LocalTime";
 import { PushToggle } from "./PushToggle";
 
-type Msg = { id: string; from_user: string; body: string; created_at: string; read_at: string | null; pending?: boolean };
+type Msg = { id: string; from_user: string; body: string; created_at: string; delivered_at: string | null; read_at: string | null; pending?: boolean };
+type Receipt = { id: string; delivered_at: string | null; read_at: string | null };
 
 // Day boundaries in UTC are only for grouping; labels are shown in local time.
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -31,12 +32,21 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
     if (document.visibilityState !== "visible") return;
     const res = await fetch(`/api/chat/${other}${latest.current ? `?after=${encodeURIComponent(latest.current)}` : ""}`, { cache: "no-store" });
     if (!res.ok) return;
-    const { messages: fresh } = (await res.json()) as { messages: Msg[] };
-    if (!fresh.length) return;
-    latest.current = fresh.at(-1)!.created_at;
+    const { messages: fresh, receipts = [] } = (await res.json()) as { messages: Msg[]; receipts?: Receipt[] };
+    if (fresh.length) latest.current = fresh.at(-1)!.created_at;
+    const ticks = new Map(receipts.map((r) => [r.id, r]));
     setMessages((list) => {
       const known = new Set(list.map((m) => m.id));
-      return [...list.filter((m) => !m.pending), ...fresh.filter((m) => !known.has(m.id))].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      // Update ticks on messages already on screen, without re-rendering unchanged ones.
+      const updated = list.map((m) => {
+        const r = ticks.get(m.id);
+        return r && (r.delivered_at !== m.delivered_at || r.read_at !== m.read_at) ? { ...m, ...r } : m;
+      });
+      const added = fresh.filter((m) => !known.has(m.id));
+      if (!added.length && updated.every((m, n) => m === list[n])) return list;
+      // A sending bubble gives way only to its own copy coming back from the server.
+      const kept = updated.filter((m) => !m.pending || !added.some((a) => a.from_user === m.from_user && a.body === m.body));
+      return [...kept, ...added].sort((a, b) => a.created_at.localeCompare(b.created_at));
     });
   }, [other]);
 
@@ -53,7 +63,7 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
     if (!body) return;
     setDraft("");
     setError("");
-    const temp: Msg = { id: `tmp-${Date.now()}`, from_user: me, body, created_at: new Date().toISOString(), read_at: null, pending: true };
+    const temp: Msg = { id: `tmp-${Date.now()}`, from_user: me, body, created_at: new Date().toISOString(), delivered_at: null, read_at: null, pending: true };
     setMessages((list) => [...list, temp]);
     start(async () => {
       const res = await sendMessage(other, body);
@@ -64,7 +74,11 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
         return;
       }
       latest.current = res.message.created_at > (latest.current ?? "") ? res.message.created_at : latest.current;
-      setMessages((list) => list.map((m) => (m.id === temp.id ? res.message! : m)));
+      const sent = res.message;
+      setMessages((list) => {
+        if (list.some((m) => m.id === sent.id)) return list.filter((m) => m.id !== temp.id);
+        return list.some((m) => m.id === temp.id) ? list.map((m) => (m.id === temp.id ? sent : m)) : [...list, sent];
+      });
     });
   };
 
@@ -83,7 +97,7 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
               {newDay && <p className="chat__day"><LocalTime iso={m.created_at} format="day" /></p>}
               <div className={`msg ${mine ? "msg--me" : "msg--them"} ${m.pending ? "is-pending" : ""}`}>
                 <p>{m.body}</p>
-                <span className="msg__meta"><LocalTime iso={m.created_at} format="time" />{mine && !m.pending && m.read_at ? " · Seen" : ""}</span>
+                <span className="msg__meta"><LocalTime iso={m.created_at} format="time" />{mine && <Ticks m={m} />}</span>
               </div>
             </div>
           );
@@ -98,5 +112,22 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
       </form>
       {error && <p className="error" role="alert">{error}</p>}
     </div>
+  );
+}
+
+/** One tick: sent. Two: delivered to their app. Two yellow: they've read it. */
+function Ticks({ m }: { m: Msg }) {
+  const [Icon, state, label] = m.pending
+    ? [Clock3, "sending", "Sending"]
+    : m.read_at
+      ? [CheckCheck, "read", "Read"]
+      : m.delivered_at
+        ? [CheckCheck, "delivered", "Delivered"]
+        : [Check, "sent", "Sent"];
+  return (
+    <span className={`ticks ticks--${state}`} title={label}>
+      <Icon size={15} strokeWidth={2.6} aria-hidden />
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }

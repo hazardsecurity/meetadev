@@ -17,7 +17,7 @@ export async function sendMessage(toUserId: string, raw: string): Promise<{ erro
 
   const rows = await query<Message>(
     `INSERT INTO messages (from_user, to_user, body) VALUES ($1, $2, $3)
-     RETURNING id, from_user, body, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, NULL AS read_at`,
+     RETURNING id, from_user, body, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, NULL AS delivered_at, NULL AS read_at`,
     [me.id, toUserId, body],
   );
   await notify(toUserId, {

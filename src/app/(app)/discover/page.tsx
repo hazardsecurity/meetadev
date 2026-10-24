@@ -63,7 +63,7 @@ export default async function DiscoverPage({ searchParams }: PageProps<"/discove
                   {[`📍 ${e.city}`, e.starts_on ? formatDate(e.starts_on) : "Date to be announced", `${e.members} ${e.members === 1 ? "person" : "people"}`].join(" · ")}
                 </span>
               </span>
-              {e.is_member ? <span className="chip chip--green">Joined</span> : e.require_code ? <span className="chip">Needs code</span> : <span className="chip chip--blue">Open</span>}
+              {e.is_member ? <span className="chip chip--green">Joined</span> : <span className="chip chip--blue">Open</span>}
             </Link>
           ))}
         </div>

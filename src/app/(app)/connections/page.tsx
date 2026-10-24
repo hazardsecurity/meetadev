@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
@@ -56,7 +57,13 @@ export default async function ChatsPage() {
                         {s && <span className="chats__time"><LocalTime iso={s.last_at} /></span>}
                       </span>
                       <span className="chats__preview">
-                        {s ? `${s.last_from_me ? "You: " : ""}${s.last_body}` : c.headline || roleLine(c.role, c.level) || "Say hi 👋"}
+                        {s?.last_from_me && (
+                          <span className={`chat-row__ticks ticks--${s.last_read ? "read" : s.last_delivered ? "delivered" : "sent"}`}
+                            title={s.last_read ? "Read" : s.last_delivered ? "Delivered" : "Sent"}>
+                            {s.last_delivered || s.last_read ? <CheckCheck size={15} strokeWidth={2.6} aria-hidden /> : <Check size={15} strokeWidth={2.6} aria-hidden />}
+                          </span>
+                        )}
+                        {s ? s.last_body : c.headline || roleLine(c.role, c.level) || "Say hi 👋"}
                       </span>
                     </span>
                     {s?.unread ? <span className="badge-count" aria-label={`${s.unread} unread`}>{s.unread}</span> : null}

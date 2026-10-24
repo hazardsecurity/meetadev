@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
 import { currentUser } from "@/lib/auth";
 import { EventSwitcher } from "@/components/EventSwitcher";
+import { InboxPulse } from "@/components/InboxPulse";
 import { eventBySlug, membership, myEvents, splitByDate, type MyEvent } from "@/lib/events";
 import { formatDate } from "@/lib/format";
 import { unreadCount } from "@/lib/chat";
@@ -46,6 +47,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </header>
       <main className="wrap app-main">{children}</main>
       {member && <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
+      {member && <InboxPulse />}
     </>
   );
 }

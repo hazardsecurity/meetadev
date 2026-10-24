@@ -51,9 +51,7 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
           <InviteQR path={invite} title={event.name} />
           <CodeTools slug={slug} code={event.join_code} />
           <p className="hint" style={{ textAlign: "center" }}>
-            {event.require_code
-              ? "The invite link includes the code. Anyone opening the plain event page has to type it."
-              : "Anyone with the event page link can join. The code is a shortcut for people typing it in."}
+            Anyone who opens the event page can join, code or not. The code is a shortcut for people typing it in.
           </p>
         </section>
 
