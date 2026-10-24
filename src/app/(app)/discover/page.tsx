@@ -4,6 +4,8 @@ import { AyoSays } from "@/components/Ayo";
 import { CitiesEditor } from "@/components/CitiesEditor";
 import { requireMember } from "@/lib/auth";
 import { tidyCities } from "@/lib/cities";
+import { CommunityCard } from "@/components/CommunityCard";
+import { communitiesInCities } from "@/lib/communities";
 import { eventsInCities, knownCities } from "@/lib/events";
 import { formatDate } from "@/lib/format";
 import { profileOf } from "@/lib/people";
@@ -20,7 +22,7 @@ export default async function DiscoverPage({ searchParams }: PageProps<"/discove
   const profile = await profileOf(me.id);
   const asked = typeof sp.city === "string" ? tidyCities(sp.city.split(",")) : [];
   const cities = asked.length ? asked : (profile?.cities ?? []);
-  const [events, suggestions] = await Promise.all([eventsInCities(cities, me.id), knownCities()]);
+  const [events, suggestions, communities] = await Promise.all([eventsInCities(cities, me.id), knownCities(), communitiesInCities(cities)]);
 
   return (
     <div className="stack narrow" style={{ "--gap": "24px" } as React.CSSProperties}>
@@ -67,6 +69,13 @@ export default async function DiscoverPage({ searchParams }: PageProps<"/discove
         </div>
       )}
 
+
+      {communities.length > 0 && (
+        <section className="stack">
+          <h2 className="h2">Communities in your cities</h2>
+          {communities.map((c) => <CommunityCard key={c.id} c={c} />)}
+        </section>
+      )}
     </div>
   );
 }

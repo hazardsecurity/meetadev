@@ -13,11 +13,12 @@ export type Event = {
   join_code: string;
   require_code: boolean;
   listed: boolean;
+  community_id: string | null;
 };
 
 export type MemberRole = "attendee" | "organizer";
 
-const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.require_code, e.listed";
+const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.require_code, e.listed, e.community_id";
 
 // No 0/O/1/I so codes survive being read off a projector.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

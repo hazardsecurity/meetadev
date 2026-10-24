@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import type { FormState } from "@/lib/actions";
-import { grantOrganizer, reviewRequest, revokeOrganizer } from "@/lib/organizer-actions";
+import { kindShort } from "@/lib/community-kinds";
+import { grantOrganizer, importCommunityList, reviewRequest, revokeOrganizer } from "@/lib/organizer-actions";
 import type { OrganizerRow, RequestWithPerson } from "@/lib/organizers";
 import { Avatar } from "./Avatar";
 
@@ -22,7 +23,12 @@ export function PendingRequests({ list }: { list: RequestWithPerson[] }) {
               <span className="person__meta">{r.email}</span>
             </div>
           </div>
-          <p><strong>{r.chapter_name}</strong> · {r.city}</p>
+          <p className="row" style={{ gap: 8 }}>
+            {r.community_kind && <span className="chip chip--blue">{kindShort(r.community_kind)}</span>}
+            <strong>{r.community_name ?? r.chapter_name}</strong>
+            <span className="hint">{[r.city, r.community_country].filter(Boolean).join(", ")}</span>
+            {r.community_status === "pending" && <span className="chip chip--yellow">New community, goes live if you approve</span>}
+          </p>
           <a className="link" href={r.chapter_url} target="_blank" rel="noopener noreferrer nofollow" style={{ overflowWrap: "anywhere" }}>
             {r.chapter_url} ↗
           </a>
@@ -88,5 +94,23 @@ export function OrganizerList({ list }: { list: OrganizerRow[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+export function ImportCommunities() {
+  const [state, action, pending] = useActionState<FormState, FormData>(importCommunityList, {});
+  return (
+    <form action={action} className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
+      <label htmlFor="csv" className="label">Import communities</label>
+      <span className="hint">
+        One per line: <code>name, type, city, country, link</code>. Type is GDG, On Campus, WTM or Other. Paste straight from a
+        spreadsheet (commas or tabs). Importing the same community again updates it instead of adding a copy.
+      </span>
+      <textarea id="csv" name="csv" className="textarea mono" rows={6} defaultValue={state.values?.csv}
+        placeholder={"GDG Ilorin, GDG, Ilorin, Nigeria, https://gdg.community.dev/gdg-ilorin/\nWomen Techmakers Lagos, WTM, Lagos, Nigeria, https://example.com/wtm-lagos"} />
+      <button className="btn btn--sm" style={{ justifySelf: "start" }} disabled={pending}>{pending ? "Importing…" : "Import"}</button>
+      {state.error && <p className="error" role="alert">{state.error}</p>}
+      {state.ok && <p className="success" role="status">{state.ok}</p>}
+    </form>
   );
 }

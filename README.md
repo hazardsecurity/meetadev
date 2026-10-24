@@ -17,6 +17,15 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 - **Members**: make co-organisers, remove someone (they can rejoin), or ban them from the event.
 - **Reports** filed by people at your event land in your dashboard.
 
+## Communities
+
+- **Communities** (GDG chapters, GDG on Campus / student clubs, Women Techmakers, other developer communities) each have a public page at `/c/<slug>` with their upcoming events, listed in the sitemap.
+- **Organisers** search the list when applying and pick their community. If it isn't listed they add it (GDG chapters must link to their gdg.community.dev page); it goes live when an admin approves the application.
+- **Events** can be linked to a community the organiser runs, and show "Hosted by …".
+- **Attendees** see "Communities in your cities" on Find events.
+- **Bulk import**: on `/admin`, paste one community per line: `name, type, city, country, link` (commas or tabs, straight from a spreadsheet). Re-importing updates instead of duplicating. Template: `docs/communities-template.csv`.
+- There's no automatic import from gdg.community.dev: its `robots.txt` disallows `/api/` for crawlers.
+
 ## For admins
 
 - Admins are set with `ADMIN_EMAILS` (comma-separated Google emails) in the environment. Nobody can make themselves an admin from inside the app.

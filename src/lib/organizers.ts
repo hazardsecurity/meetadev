@@ -37,12 +37,17 @@ export async function latestRequest(userId: string) {
   return rows[0] ?? null;
 }
 
-export type RequestWithPerson = OrganizerRequest & { name: string; email: string; handle: string; photo_url: string; color: number };
+export type RequestWithPerson = OrganizerRequest & {
+  name: string; email: string; handle: string; photo_url: string; color: number;
+  community_name: string | null; community_kind: string | null; community_status: string | null; community_country: string | null;
+};
 
 export async function requestsByStatus(status: OrganizerRequest["status"]) {
   return query<RequestWithPerson>(
-    `SELECT r.*, p.name, u.email, p.handle, p.photo_url, p.color
+    `SELECT r.*, p.name, u.email, p.handle, p.photo_url, p.color,
+            c.name AS community_name, c.kind AS community_kind, c.status AS community_status, c.country AS community_country
        FROM organizer_requests r JOIN users u ON u.id = r.user_id JOIN profiles p ON p.user_id = r.user_id
+       LEFT JOIN communities c ON c.id = r.community_id
       WHERE r.status = $1
       ORDER BY r.created_at ${status === "pending" ? "ASC" : "DESC"} LIMIT 200`,
     [status],

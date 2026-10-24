@@ -4,14 +4,27 @@ import { useActionState } from "react";
 import type { FormState } from "@/lib/actions";
 import { createEvent, joinByCode, updateEvent } from "@/lib/event-actions";
 import { applyForOrganizer } from "@/lib/organizer-actions";
+import { CommunityPicker } from "./CommunityPicker";
+import type { CommunityLite } from "@/lib/community-kinds";
 import type { Event } from "@/lib/events";
 
-export function EventForm({ event }: { event?: Event }) {
+export function EventForm({ event, communities = [] }: { event?: Event; communities?: CommunityLite[] }) {
   const action = event ? updateEvent.bind(null, event.slug) : createEvent;
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
   const v = state.values;
   return (
     <form action={formAction} className="stack">
+      {communities.length > 0 && (
+        <div className="field">
+          <label htmlFor="community_id">Community</label>
+          <select id="community_id" name="community_id" className="select"
+            defaultValue={v?.community_id ?? event?.community_id ?? (event ? "" : communities[0].id)}>
+            <option value="">Not linked to a community</option>
+            {communities.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.city}</option>)}
+          </select>
+          <span className="hint">The event shows on your community&apos;s page, for people who follow its city.</span>
+        </div>
+      )}
       <div className="field">
         <label htmlFor="name">Event name</label>
         <input id="name" name="name" className="input" required minLength={3} maxLength={80}
@@ -76,24 +89,11 @@ export function OrganizerApplyForm({ defaultCity }: { defaultCity: string }) {
   if (state.ok) return <p className="card card--green success">Application sent! We&apos;ll review it soon. Check back on this page.</p>;
   return (
     <form action={formAction} className="stack">
+      <CommunityPicker defaultCity={defaultCity} values={v} />
       <div className="field">
-        <label htmlFor="chapter_name">GDG chapter</label>
-        <input id="chapter_name" name="chapter_name" className="input" required minLength={3} maxLength={80} placeholder="GDG Ilorin" defaultValue={v?.chapter_name} />
-      </div>
-      <div className="field">
-        <label htmlFor="chapter_url">Chapter page</label>
-        <input id="chapter_url" name="chapter_url" type="url" className="input" required maxLength={200}
-          placeholder="https://gdg.community.dev/gdg-ilorin/" defaultValue={v?.chapter_url} />
-        <span className="hint">Your chapter&apos;s page on gdg.community.dev, where you&apos;re listed as an organiser.</span>
-      </div>
-      <div className="field">
-        <label htmlFor="apply_city">City</label>
-        <input id="apply_city" name="city" className="input" required minLength={2} maxLength={60} defaultValue={v?.city ?? defaultCity} placeholder="Ilorin" />
-      </div>
-      <div className="field">
-        <label htmlFor="note">Anything else? <span className="hint">(optional)</span></label>
-        <textarea id="note" name="note" className="textarea" maxLength={400}
-          placeholder="Your role in the chapter, or an event you're planning." defaultValue={v?.note} />
+        <label htmlFor="note">Your role, or anything else? <span className="hint">(optional)</span></label>
+        <textarea id="note" name="note" className="textarea" maxLength={400} defaultValue={v?.note}
+          placeholder="I'm a co-organiser of the chapter and we're planning DevFest in November." />
       </div>
       {state.error && <p className="error" role="alert">{state.error}</p>}
       <button className="btn btn--green" disabled={pending}>{pending ? "Sending…" : "Apply"}</button>

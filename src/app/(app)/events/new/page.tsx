@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AyoSays } from "@/components/Ayo";
 import { EventForm, OrganizerApplyForm } from "@/components/EventForms";
 import { requireMember } from "@/lib/auth";
+import { myCommunities } from "@/lib/communities";
 import { canCreateEvents, latestRequest } from "@/lib/organizers";
 import { profileOf } from "@/lib/people";
 
@@ -14,7 +15,7 @@ export default async function NewEventPage() {
     return (
       <div className="stack narrow" style={{ "--gap": "20px" } as React.CSSProperties}>
         <AyoSays mood="excited" size={96}>Ooh, a new event! Tell me about it and I&apos;ll make you an invite link.</AyoSays>
-        <div className="card"><EventForm /></div>
+        <div className="card"><EventForm communities={await myCommunities(me.id)} /></div>
       </div>
     );
   }

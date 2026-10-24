@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { GrantForm, OrganizerList, PendingRequests } from "@/components/AdminTools";
+import { GrantForm, ImportCommunities, OrganizerList, PendingRequests } from "@/components/AdminTools";
+import { communityCount } from "@/lib/communities";
 import { requireMember } from "@/lib/auth";
 import { isAdmin, organizers, requestsByStatus } from "@/lib/organizers";
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 export default async function AdminPage() {
   const me = await requireMember("/admin");
   if (!isAdmin(me)) notFound();
-  const [pending, list] = await Promise.all([requestsByStatus("pending"), organizers()]);
+  const [pending, list, communities] = await Promise.all([requestsByStatus("pending"), organizers(), communityCount()]);
 
   return (
     <div className="stack narrow" style={{ "--gap": "24px" } as React.CSSProperties}>
@@ -23,6 +24,10 @@ export default async function AdminPage() {
         <PendingRequests list={pending} />
       </section>
       <section className="card"><GrantForm /></section>
+      <section className="card stack">
+        <h2 className="h2">Communities <span className="chip">{communities} listed</span></h2>
+        <ImportCommunities />
+      </section>
       <section className="card stack">
         <h2 className="h2">Approved organisers</h2>
         <OrganizerList list={list} />

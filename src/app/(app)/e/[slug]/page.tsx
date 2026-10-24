@@ -6,6 +6,7 @@ import { EventHeader } from "@/components/EventHeader";
 import { JoinEvent } from "@/components/JoinEvent";
 import { PersonCard } from "@/components/PersonCard";
 import { currentUser } from "@/lib/auth";
+import { query } from "@/lib/db";
 import { eventBySlug, isBanned, memberCount, membership, type Event } from "@/lib/events";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import { directory, profileOf, suggestions } from "@/lib/people";
@@ -49,6 +50,9 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
   const event = await eventBySlug(slug);
   if (!event) notFound();
 
+  const community = event.community_id
+    ? (await query<{ slug: string; name: string }>("SELECT slug, name FROM communities WHERE id = $1 AND status = 'active'", [event.community_id]))[0] ?? null
+    : null;
   const code = one(sp.code).toUpperCase();
   const here = `/e/${slug}${code ? `?code=${encodeURIComponent(code)}` : ""}`;
   const me = await currentUser();
@@ -87,17 +91,17 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
     return (
       <div className="event-join">
         {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
-        <EventHeader event={event} members={count} />
+        <EventHeader event={event} members={count} community={community} />
         {action}
       </div>
     );
   }
 
-  return <Directory event={event} viewerId={me.id} viewerName={me.name ?? ""} organiser={role === "organizer"} sp={sp} />;
+  return <Directory event={event} community={community} viewerId={me.id} viewerName={me.name ?? ""} organiser={role === "organizer"} sp={sp} />;
 }
 
-async function Directory({ event, viewerId, viewerName, organiser, sp }: {
-  event: Event; viewerId: string; viewerName: string; organiser: boolean; sp: Record<string, string | string[] | undefined>;
+async function Directory({ event, community, viewerId, viewerName, organiser, sp }: {
+  event: Event; community: { slug: string; name: string } | null; viewerId: string; viewerName: string; organiser: boolean; sp: Record<string, string | string[] | undefined>;
 }) {
   const filters = { q: one(sp.q).trim(), role: one(sp.role), level: one(sp.level), intent: one(sp.intent), stack: one(sp.stack) };
   const page = Math.max(0, Number.parseInt(one(sp.page) || "0", 10) || 0);
@@ -119,7 +123,7 @@ async function Directory({ event, viewerId, viewerName, organiser, sp }: {
   return (
     <div className="stack" style={{ "--gap": "28px" } as React.CSSProperties}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
-        <EventHeader event={event} members={count} compact />
+        <EventHeader event={event} members={count} compact community={community} />
         <div className="row">
           <Link className="btn btn--yellow btn--sm" href={`${base}/leaderboard`}>🏆 Leaderboard</Link>
           {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}

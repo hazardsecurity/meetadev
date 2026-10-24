@@ -171,3 +171,31 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);
+
+-- ---------------------------------------------------------------------------
+-- Developer communities (GDG chapters, student clubs, WTM, others).
+-- Organisers pick theirs when applying; attendees browse them by city.
+
+CREATE TABLE IF NOT EXISTS communities (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug       text NOT NULL UNIQUE,
+  name       text NOT NULL,
+  kind       text NOT NULL DEFAULT 'other' CHECK (kind IN ('gdg', 'gdsc', 'wtm', 'other')),
+  city       text NOT NULL,
+  country    text NOT NULL DEFAULT '',
+  url        text NOT NULL DEFAULT '',
+  status     text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending')),
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS communities_city_idx ON communities (lower(city));
+CREATE UNIQUE INDEX IF NOT EXISTS communities_url_key ON communities (lower(url)) WHERE url <> '';
+
+CREATE TABLE IF NOT EXISTS community_organizers (
+  community_id uuid NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (community_id, user_id)
+);
+
+ALTER TABLE organizer_requests ADD COLUMN IF NOT EXISTS community_id uuid REFERENCES communities(id) ON DELETE SET NULL;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS community_id uuid REFERENCES communities(id) ON DELETE SET NULL;

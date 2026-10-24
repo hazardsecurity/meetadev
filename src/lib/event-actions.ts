@@ -7,7 +7,7 @@ import { currentUser } from "./auth";
 import { pool, query } from "./db";
 import { tidyCity } from "./cities";
 import { eventBySlug, isBanned, membership, newJoinCode, slugifyEvent } from "./events";
-import { canCreateEvents } from "./organizers";
+import { canCreateEvents, isAdmin } from "./organizers";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
 import type { FormState } from "./actions";
@@ -40,9 +40,22 @@ const eventSchema = z.object({
 });
 
 const field = (form: FormData, k: string) => String(form.get(k) ?? "");
+
+/** The chosen community, if this person organises it (admins may pick any). */
+async function communityFor(form: FormData, me: { id: string; email: string }) {
+  const id = field(form, "community_id");
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  const rows = await query<{ id: string }>(
+    `SELECT c.id FROM communities c WHERE c.id = $1 AND c.status = 'active'
+       AND ($3 OR EXISTS (SELECT 1 FROM community_organizers o WHERE o.community_id = c.id AND o.user_id = $2))`,
+    [id, me.id, isAdmin(me)],
+  );
+  return rows[0]?.id ?? null;
+}
 const echo = (form: FormData) => ({
   name: field(form, "name"), city: field(form, "city"), starts_on: field(form, "starts_on"), about: field(form, "about"),
   require_code: form.get("require_code") === "on" ? "on" : "", listed: form.get("listed") === "on" ? "on" : "",
+  community_id: field(form, "community_id"),
 });
 
 // ---------------------------------------------------------------------------
@@ -75,9 +88,9 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
       slug = `${base}-${n}`;
     }
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO events (slug, name, city, starts_on, about, join_code, require_code, listed, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), e.require_code, e.listed, me.id],
+      `INSERT INTO events (slug, name, city, starts_on, about, join_code, require_code, listed, community_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), e.require_code, e.listed, await communityFor(form, me), me.id],
     );
     await client.query("INSERT INTO event_members (event_id, user_id, role) VALUES ($1, $2, 'organizer')", [rows[0].id, me.id]);
     await client.query("COMMIT");
@@ -133,7 +146,7 @@ export async function leaveEvent(slug: string) {
 // Organiser tools
 
 export async function updateEvent(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
-  const { event } = await organised(slug);
+  const { me, event } = await organised(slug);
   const parsed = eventSchema.safeParse({
     name: field(form, "name"),
     city: field(form, "city"),
@@ -144,9 +157,11 @@ export async function updateEvent(slug: string, _prev: FormState, form: FormData
   });
   if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
   const e = parsed.data;
-  await query("UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, require_code = $6, listed = $7 WHERE id = $1", [
-    event.id, e.name, e.city, e.starts_on, e.about, e.require_code, e.listed,
-  ]);
+  const community = field(form, "community_id") ? await communityFor(form, me) : null;
+  await query(
+    "UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, require_code = $6, listed = $7, community_id = $8 WHERE id = $1",
+    [event.id, e.name, e.city, e.starts_on, e.about, e.require_code, e.listed, community ?? (field(form, "community_id") ? event.community_id : null)],
+  );
   revalidatePath("/", "layout");
   return { ok: "Saved." };
 }
