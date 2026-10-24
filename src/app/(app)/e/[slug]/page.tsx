@@ -50,12 +50,15 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
   const event = await eventBySlug(slug);
   if (!event) notFound();
 
-  const community = event.community_id
-    ? (await query<{ slug: string; name: string }>("SELECT slug, name FROM communities WHERE id = $1 AND status = 'active'", [event.community_id]))[0] ?? null
-    : null;
+  // Independent lookups run together: each is a trip to the database.
+  const [community, me] = await Promise.all([
+    event.community_id
+      ? query<{ slug: string; name: string }>("SELECT slug, name FROM communities WHERE id = $1 AND status = 'active'", [event.community_id]).then((r) => r[0] ?? null)
+      : null,
+    currentUser(),
+  ]);
   const code = one(sp.code).toUpperCase();
   const here = `/e/${slug}${code ? `?code=${encodeURIComponent(code)}` : ""}`;
-  const me = await currentUser();
   const role = me ? await membership(event.id, me.id) : null;
 
   if (!me?.onboarded || !role) {

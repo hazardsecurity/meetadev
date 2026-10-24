@@ -8,6 +8,9 @@ const buildId = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMI
 // per request instead of using Cache Components.
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: buildId },
+  // Keep tabs someone just visited for 30s, so switching back is instant.
+  // Actions that change data still refresh what they touch.
+  experimental: { staleTimes: { dynamic: 30 } },
 };
 
 export default nextConfig;

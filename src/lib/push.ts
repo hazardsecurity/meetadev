@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import webpush from "web-push";
 import { query } from "./db";
 
@@ -10,9 +11,14 @@ if (configured) webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:hel
 
 export type PushPayload = { title: string; body: string; url: string; tag?: string };
 
-/** Notify every device the person has turned notifications on for. Never throws. */
+/** Notify every device the person has turned notifications on for, after the
+ *  response is sent so the tap that caused it isn't kept waiting. Never throws. */
 export async function notify(userId: string, payload: PushPayload) {
   if (!configured) return;
+  after(() => send(userId, payload));
+}
+
+async function send(userId: string, payload: PushPayload) {
   try {
     const subs = await query<{ endpoint: string; p256dh: string; auth: string }>(
       "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1",

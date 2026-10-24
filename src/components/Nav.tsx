@@ -17,7 +17,14 @@ const TABS: Tab[] = [
 export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { incoming: number; unread?: number; peopleHref: string; className?: string }) {
   const path = usePathname();
   const href = (key: string) =>
-    ({ people: peopleHref, requests: "/requests", contacts: "/connections", leaderboard: "/leaderboard", me: "/me" })[key]!;
+    ({
+      people: peopleHref,
+      requests: "/requests",
+      contacts: "/connections",
+      // Straight to the current event's board, skipping /leaderboard's redirect.
+      leaderboard: peopleHref.startsWith("/e/") ? `${peopleHref}/leaderboard` : "/leaderboard",
+      me: "/me",
+    })[key]!;
   const active = (key: string) => {
     if (key === "leaderboard") return path === "/leaderboard" || path.endsWith("/leaderboard");
     if (key === "contacts") return path.startsWith("/connections") || path.startsWith("/chat/");

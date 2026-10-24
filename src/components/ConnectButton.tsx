@@ -25,13 +25,17 @@ export function ConnectButton({
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
 
-  const run = (fn: () => Promise<{ error?: string; ok?: string }>, next: Relation) =>
+  // Show the result straight away; put it back if the server says no.
+  const run = (fn: () => Promise<{ error?: string; ok?: string }>, next: Relation) => {
+    const before = state;
+    setError("");
+    setState(next);
     start(async () => {
-      setError("");
-      const res = await fn();
-      if (res.error) setError(res.error);
-      else setState(res.ok === "connected" ? "connected" : next);
+      const res = await fn().catch(() => ({ error: "Couldn't reach meetadev. Try again." }) as { error?: string; ok?: string });
+      if (res.error) { setState(before); setError(res.error); }
+      else if (res.ok === "connected") setState("connected");
     });
+  };
 
   if (state === "self") return null;
 
