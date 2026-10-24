@@ -65,6 +65,15 @@ export async function myEvents(userId: string) {
   );
 }
 
+/** Upcoming (soonest first, undated last) and past (latest first), by the day in Lagos. */
+export function splitByDate<T extends { starts_on: string | null }>(events: T[]) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
+  const upcoming = events.filter((e) => !e.starts_on || e.starts_on >= today)
+    .sort((a, b) => (a.starts_on ?? "9999").localeCompare(b.starts_on ?? "9999"));
+  const past = events.filter((e) => e.starts_on && e.starts_on < today);
+  return { upcoming, past };
+}
+
 export async function memberCount(eventId: string) {
   const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1", [eventId]);
   return rows[0].n;

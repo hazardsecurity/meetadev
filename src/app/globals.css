@@ -573,3 +573,38 @@ h1, h2, h3, p { margin: 0; }
 @keyframes skeleton-shine { to { background-position: -200% 0; } }
 @keyframes skeleton-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton, .skeleton__dot, .skeleton__line { animation: none; } }
+
+/* ---------- event switcher ---------- */
+.event-switch { background: #fff; cursor: pointer; padding: 0; }
+.event-switch[aria-expanded="true"] { border-color: var(--blue); color: var(--blue); }
+.switcher { position: relative; flex: none; }
+.switcher__menu {
+  position: absolute; top: calc(100% + 10px); left: 0; z-index: 50;
+  width: min(320px, calc(100vw - 32px)); max-height: min(70vh, 480px); overflow-y: auto;
+  background: #fff; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 18px; padding: 8px;
+  box-shadow: 0 12px 32px rgb(32 33 36 / 0.14);
+  animation: switcher-in 0.14s ease-out;
+}
+.switcher__title { padding: 6px 10px 4px; }
+.switcher__item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px; border-radius: 12px; color: var(--ink); font-weight: 600;
+}
+.switcher__item:hover, .switcher__item:focus-visible { background: var(--wash); }
+.switcher__item[aria-current] { background: var(--blue-soft); color: #1a5dc8; }
+.switcher__name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.switcher__when { display: block; font-size: 0.78rem; font-weight: 500; color: var(--muted); }
+.switcher__empty { padding: 6px 10px 10px; }
+.switcher__foot { border-top: 2px solid var(--line-soft); margin-top: 6px; padding-top: 6px; }
+.switcher__foot .switcher__item { justify-content: flex-start; color: var(--blue); }
+@keyframes switcher-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .switcher__menu { animation: none; } }
+
+/* ---------- your events ---------- */
+.past-events > summary { cursor: pointer; list-style: none; margin-bottom: 12px; }
+.past-events > summary::-webkit-details-marker { display: none; }
+.past-events > summary::before { content: "▸ "; color: var(--muted); }
+.past-events[open] > summary::before { content: "▾ "; }
+.event-card--past { opacity: 0.75; }
+.leave-zone { border-top: 2px dashed var(--line); padding-top: 18px; display: grid; gap: 6px; justify-items: start; }
+@media (max-width: 759px) { .switcher__menu { position: fixed; top: 70px; left: 16px; right: 16px; width: auto; max-height: calc(100dvh - 70px - 96px - env(safe-area-inset-bottom)); } }

@@ -116,13 +116,13 @@ export function Reports({ slug, list }: { slug: string; list: ReportRow[] }) {
   );
 }
 
-export function LeaveEvent({ slug }: { slug: string }) {
+export function LeaveEvent({ slug, name }: { slug: string; name?: string }) {
   const { msg, pending, run } = useAct();
   return (
     <div className="stack" style={{ "--gap": "8px" } as React.CSSProperties}>
       <button className="btn btn--ghost btn--sm danger" style={{ justifySelf: "start" }} disabled={pending}
-        onClick={() => confirm("Leave this event? You can rejoin with the invite link.") && run(() => leaveEvent(slug))}>
-        Leave this event
+        onClick={() => confirm(`Leave ${name ?? "this event"}? You'll drop off its people list and leaderboard. Your connections and chats stay, and you can rejoin with the invite link.`) && run(() => leaveEvent(slug))}>
+        {pending ? "Leaving…" : "Leave this event"}
       </button>
       {msg && <p className="error" role="alert">{msg}</p>}
     </div>

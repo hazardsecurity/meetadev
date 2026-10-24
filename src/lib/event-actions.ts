@@ -128,14 +128,15 @@ export async function joinByCode(_prev: FormState, form: FormData): Promise<Form
   return joinEvent(rows[0].slug, code);
 }
 
-export async function leaveEvent(slug: string) {
+export async function leaveEvent(slug: string): Promise<FormState> {
   const me = await signedIn();
   const event = await eventBySlug(slug);
   if (!event) redirect("/events");
   const role = await membership(event.id, me.id);
   if (role === "organizer") {
     const others = await query("SELECT 1 FROM event_members WHERE event_id = $1 AND role = 'organizer' AND user_id <> $2", [event.id, me.id]);
-    if (!others.length) throw new Error("Add another organiser before leaving your own event.");
+    // Returned, not thrown: production hides thrown messages.
+    if (!others.length) return { error: "You're the only organiser. Make someone else an organiser in Organiser tools first." };
   }
   await query("DELETE FROM event_members WHERE event_id = $1 AND user_id = $2", [event.id, me.id]);
   revalidatePath("/", "layout");

@@ -4,7 +4,9 @@ import { cookies } from "next/headers";
 import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
 import { currentUser } from "@/lib/auth";
-import { eventBySlug, membership } from "@/lib/events";
+import { EventSwitcher } from "@/components/EventSwitcher";
+import { eventBySlug, membership, myEvents, splitByDate, type MyEvent } from "@/lib/events";
+import { formatDate } from "@/lib/format";
 import { unreadCount } from "@/lib/chat";
 import { counts } from "@/lib/people";
 
@@ -15,7 +17,9 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const me = await currentUser();
   const member = me?.onboarded ? me : null;
-  const [incoming, unread] = member ? await Promise.all([counts(member.id).then((c) => c.incoming), unreadCount(member.id)]) : [0, 0];
+  const [incoming, unread, mine] = member
+    ? await Promise.all([counts(member.id).then((c) => c.incoming), unreadCount(member.id), myEvents(member.id)])
+    : [0, 0, []];
 
   // The event "People" opens: the last one visited, if they're still in it.
   const lastSlug = (await cookies()).get("dfi_event")?.value ?? "";
@@ -29,9 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="wrap topbar__in">
           <div className="row" style={{ flexWrap: "nowrap", minWidth: 0 }}>
             <Logo href={member ? peopleHref : "/"} subtitle={current?.name} />
-            {member && (
-              <Link href="/events" className="event-switch" aria-label="Switch event">⇄</Link>
-            )}
+            {member && <EventSwitcher events={switchList(mine)} currentSlug={current?.slug ?? null} />}
           </div>
           {member ? (
             <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} />
@@ -46,4 +48,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       {member && <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
     </>
   );
+}
+
+/** Upcoming events for the header switcher, soonest first. */
+function switchList(events: MyEvent[]) {
+  return splitByDate(events).upcoming.slice(0, 8).map((e) => ({
+    slug: e.slug,
+    name: e.name,
+    when: [e.starts_on ? formatDate(e.starts_on) : "Date to be announced", e.city].filter(Boolean).join(" · "),
+  }));
 }

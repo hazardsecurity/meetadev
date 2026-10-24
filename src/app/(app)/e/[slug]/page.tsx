@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { LeaveEvent } from "@/components/OrganiserTools";
 import { AyoSays } from "@/components/Ayo";
 import { EventHeader } from "@/components/EventHeader";
 import { JoinEvent } from "@/components/JoinEvent";
@@ -182,6 +183,11 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
             {hasMore && <Link className="btn btn--white btn--sm" href={qs({ page: String(page + 1) })}>More people</Link>}
           </div>
         )}
+      </section>
+
+      <section className="leave-zone">
+        <p className="muted">Not going any more?</p>
+        <LeaveEvent slug={event.slug} name={event.name} />
       </section>
     </div>
   );
