@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { LeaveEvent } from "@/components/OrganiserTools";
 import { AyoSays } from "@/components/Ayo";
+import { Avatar } from "@/components/Avatar";
 import { EventHeader } from "@/components/EventHeader";
 import { JoinEvent } from "@/components/JoinEvent";
 import { PersonCard } from "@/components/PersonCard";
+import { SwipeDeck } from "@/components/SwipeDeck";
 import { currentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { eventBySlug, isBanned, memberCount, membership, type Event } from "@/lib/events";
+import { eventBySlug, hereCount, isBanned, isHere, memberCount, membership, type Event } from "@/lib/events";
 import { isAdmin } from "@/lib/organizers";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
-import { directory, profileOf, suggestions } from "@/lib/people";
+import { connectionsHere, deck, directory, profileOf, suggestions, type PublicProfile } from "@/lib/people";
 import { jsonLd, noindex, SITE_URL } from "@/lib/site";
 
 // schema.org Event, so listed DevFest events can show in Google's event results.
@@ -111,47 +114,142 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
   const filters = { q: one(sp.q).trim(), role: one(sp.role), level: one(sp.level), intent: one(sp.intent), stack: one(sp.stack) };
   const page = Math.max(0, Number.parseInt(one(sp.page) || "0", 10) || 0);
   const filtering = Object.values(filters).some(Boolean);
-  const profile = await profileOf(viewerId);
-  const [{ people, hasMore }, picks, count] = await Promise.all([
+  // The deck is the event's main screen; People is the directory, for searching and browsing.
+  const deckView = !filtering && page === 0 && one(sp.view) !== "people";
+  const [profile, count, here] = await Promise.all([profileOf(viewerId), memberCount(event.id), isHere(event.id, viewerId)]);
+  const base = `/e/${event.slug}`;
+  const views = (
+    <nav className="seg" aria-label="Event views">
+      <Link href={base} className={deckView ? "on" : undefined} aria-current={deckView ? "page" : undefined}>Deck</Link>
+      <Link href={`${base}?view=people`} className={deckView ? undefined : "on"} aria-current={deckView ? undefined : "page"}>People</Link>
+    </nav>
+  );
+
+  return (
+    <div className="stack" style={{ "--gap": "24px" } as React.CSSProperties}>
+      {deckView ? (
+        // The deck gets the screen: the event's name is already in the top bar.
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          {views}
+          <div className="row">
+            {here && <span className="chip chip--green"><span className="live" aria-hidden />You&apos;re here</span>}
+            {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+          </div>
+          {sp.blocked && <p className="card card--green" style={{ flexBasis: "100%" }}>Blocked. You won&apos;t see each other any more.</p>}
+        </div>
+      ) : (
+        <>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
+            <EventHeader event={event} members={count} compact community={community} />
+            <div className="row">
+              <Link className="btn btn--yellow btn--sm" href={`${base}/leaderboard`}>🏆 Leaderboard</Link>
+              {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+            </div>
+          </div>
+          {sp.joined && <p className="card card--green success">You&apos;re in! Check in at the venue and the deck fills with people who are there.</p>}
+          {sp.blocked && <p className="card card--green">Blocked. You won&apos;t see each other any more.</p>}
+          {views}
+        </>
+      )}
+
+      {deckView && profile ? (
+        <Suspense fallback={<DeckSkeleton />}>
+          <DeckView event={event} profile={profile} joined={count} here={here} />
+        </Suspense>
+      ) : (
+        <People event={event} viewerId={viewerId} viewerName={viewerName} profile={profile} filters={filters} filtering={filtering} page={page} />
+      )}
+
+      <section className="leave-zone">
+        <p className="muted">Not going any more?</p>
+        <LeaveEvent slug={event.slug} name={event.name} />
+      </section>
+    </div>
+  );
+}
+
+function DeckSkeleton() {
+  return (
+    <div className="deck-wrap skeleton" aria-busy="true" aria-label="Loading the deck">
+      <div className="dcard">
+        <div className="dcard__top"><span className="skeleton__dot skeleton__dot--face" /></div>
+        <div className="dcard__body">
+          <span className="skeleton__line skeleton__line--title" />
+          <span className="skeleton__line skeleton__line--short" />
+          <span className="skeleton__line" />
+          <span className="skeleton__line" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const names = (people: { name: string }[]) => {
+  const first = people.map((p) => p.name.split(" ")[0]);
+  return first.length <= 2 ? first.join(" and ") : `${first.slice(0, 2).join(", ")} and ${first.length - 2} more`;
+};
+
+async function DeckView({ event, profile, joined, here }: { event: Event; profile: PublicProfile; joined: number; here: boolean }) {
+  if (!here)
+    return (
+      <div className="empty">
+        <AyoSays mood="thinking" side="below">
+          Check in to start meeting people. Scan the check-in code on a poster or the big screen at the venue: the deck only shows people who are there.
+        </AyoSays>
+        <Link className="btn btn--white" href={`/e/${event.slug}?view=people`}>Browse people</Link>
+      </div>
+    );
+
+  const [cards, friends, hereNow] = await Promise.all([deck(profile, event.id), connectionsHere(profile.user_id, event.id), hereCount(event.id)]);
+  return (
+    <section className="stack" style={{ "--gap": "14px" } as React.CSSProperties}>
+      {friends.length > 0 && (
+        <Link className="strip" href={friends.length === 1 ? `/chat/${friends[0].handle}` : "/connections"}>
+          <span className="faces" aria-hidden>
+            {friends.slice(0, 3).map((f) => <Avatar key={f.user_id} name={f.name} color={f.color} photo={f.photo_url} size={32} />)}
+          </span>
+          <span><b>{names(friends)}</b> {friends.length === 1 ? "is" : "are"} here too</span>
+          <span className="strip__go">Chat</span>
+        </Link>
+      )}
+      <SwipeDeck slug={event.slug} cards={cards} me={{ name: profile.name, color: profile.color, photo_url: profile.photo_url }} waiting={joined - hereNow} />
+    </section>
+  );
+}
+
+async function People({ event, viewerId, viewerName, profile, filters, filtering, page }: {
+  event: Event; viewerId: string; viewerName: string; profile: PublicProfile | null;
+  filters: { q: string; role: string; level: string; intent: string; stack: string }; filtering: boolean; page: number;
+}) {
+  const [{ people, hasMore }, picks] = await Promise.all([
     directory(viewerId, event.id, filters, page),
     filtering || page > 0 || !profile ? Promise.resolve([]) : suggestions(profile, event.id),
-    memberCount(event.id),
   ]);
   const base = `/e/${event.slug}`;
   const qs = (patch: Record<string, string>) => {
-    const p = new URLSearchParams({ ...filters, ...patch });
+    const p = new URLSearchParams({ view: "people", ...filters, ...patch });
     for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
-    return p.size ? `${base}?${p}` : base;
+    return `${base}?${p}`;
   };
   const first = viewerName.split(" ")[0];
 
   return (
-    <div className="stack" style={{ "--gap": "28px" } as React.CSSProperties}>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
-        <EventHeader event={event} members={count} compact community={community} />
-        <div className="row">
-          <Link className="btn btn--yellow btn--sm" href={`${base}/leaderboard`}>🏆 Leaderboard</Link>
-          {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
-        </div>
-      </div>
-
-      {sp.joined && <p className="card card--green success">You&apos;re in! Here&apos;s who&apos;s at {event.name}.</p>}
-      {sp.blocked && <p className="card card--green">Blocked. You won&apos;t see each other any more.</p>}
-
+    <>
       {picks.length > 0 && (
         <section className="stack">
           <AyoSays mood="wave" size={84}>
             {`${first}, here ${picks.length === 1 ? "is someone" : `are ${picks.length} people`} I think you should meet.`}
           </AyoSays>
           <div className="grid-people">
-            {picks.map((p) => <PersonCard key={p.user_id} person={p} reason={p.reason} />)}
+            {picks.map((p) => <PersonCard key={p.user_id} person={p} reason={p.reason} slug={event.slug} />)}
           </div>
         </section>
       )}
 
       <section className="stack">
-        <h2 className="h2">Everyone here</h2>
+        <h2 className="h2">Everyone at {event.name}</h2>
         <form className="filters" action={base}>
+          <input type="hidden" name="view" value="people" />
           <input className="input" type="search" name="q" defaultValue={filters.q} placeholder="Search names, intros…" aria-label="Search" />
           <Select name="role" label="Any role" value={filters.role} options={ROLES.map((r) => [r.id, r.label])} />
           <Select name="level" label="Any level" value={filters.level} options={LEVELS.map((l) => [l.id, l.label])} />
@@ -165,11 +263,13 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
           <Link className="chip chip--green" href={qs({ intent: "hiring", page: "" })}>💼 Hiring</Link>
           <Link className="chip chip--blue" href={qs({ intent: "mentor_wanted", page: "" })}>🌱 Wants a mentor</Link>
           <Link className="chip chip--red" href={qs({ intent: "cofounder", page: "" })}>🚀 Co-founders</Link>
-          {filtering && <Link className="chip" href={base}>✕ Clear filters</Link>}
+          {filtering && <Link className="chip" href={`${base}?view=people`}>✕ Clear filters</Link>}
         </div>
 
+        <p className="hint">Meet is private. They only find out if they want to meet you too.</p>
+
         {people.length ? (
-          <div className="grid-people">{people.map((p) => <PersonCard key={p.user_id} person={p} />)}</div>
+          <div className="grid-people">{people.map((p) => <PersonCard key={p.user_id} person={p} slug={event.slug} />)}</div>
         ) : (
           <div className="empty">
             <AyoSays mood={filtering ? "thinking" : "happy"} side="below">
@@ -185,12 +285,7 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
           </div>
         )}
       </section>
-
-      <section className="leave-zone">
-        <p className="muted">Not going any more?</p>
-        <LeaveEvent slug={event.slug} name={event.name} />
-      </section>
-    </div>
+    </>
   );
 }
 

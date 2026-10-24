@@ -1,6 +1,7 @@
 import "server-only";
 import { query } from "./db";
-import { roleLabel } from "./options";
+import { CONFIRMED, eventsTogether } from "./events";
+import { rank, score } from "./match";
 
 export type PublicProfile = {
   user_id: string;
@@ -22,25 +23,23 @@ export type PublicProfile = {
 
 export type Contact = { whatsapp: string; phone: string; contact_email: string };
 
-export type Relation = "self" | "none" | "outgoing" | "incoming" | "connected";
+/** "outgoing": I want to meet them and it isn't mutual yet. Their want of me is never a relation: it's private. */
+export type Relation = "self" | "none" | "outgoing" | "connected";
 
-export type Person = PublicProfile & { relation: Relation; request_id: string | null };
+export type Person = PublicProfile & { relation: Relation };
 
 const PUBLIC_COLS = `p.user_id, p.handle, p.name, p.headline, p.bio, p.role, p.level, p.intents, p.stack,
   p.linkedin, p.github, p.x_handle, p.website, p.color, p.photo_url`;
 
-// Relation of profile p to $1 (the viewer). A declined request still reads as
-// "outgoing" to the sender so nobody learns they were turned down.
+// Relation of profile p to $1 (the viewer).
 const RELATION = `
   CASE
     WHEN p.user_id = $1 THEN 'self'
     WHEN EXISTS (SELECT 1 FROM connection_requests r WHERE r.status = 'accepted'
                  AND ((r.from_user = $1 AND r.to_user = p.user_id) OR (r.from_user = p.user_id AND r.to_user = $1))) THEN 'connected'
     WHEN EXISTS (SELECT 1 FROM connection_requests r WHERE r.from_user = $1 AND r.to_user = p.user_id) THEN 'outgoing'
-    WHEN EXISTS (SELECT 1 FROM connection_requests r WHERE r.from_user = p.user_id AND r.to_user = $1 AND r.status = 'pending') THEN 'incoming'
     ELSE 'none'
-  END AS relation,
-  (SELECT r.id FROM connection_requests r WHERE r.from_user = p.user_id AND r.to_user = $1 AND r.status = 'pending') AS request_id`;
+  END AS relation`;
 
 const NOT_BLOCKED = `NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker = $1 AND b.blocked = p.user_id) OR (b.blocker = p.user_id AND b.blocked = $1))`;
 
@@ -110,28 +109,6 @@ export async function profileByHandle(viewerId: string, handle: string) {
   return { person: rest as Person, contact };
 }
 
-export type RequestRow = PublicProfile & { request_id: string; note: string; created_at: Date };
-
-export async function incomingRequests(userId: string) {
-  return query<RequestRow>(
-    `SELECT ${PUBLIC_COLS}, r.id AS request_id, r.note, r.created_at
-       FROM connection_requests r JOIN profiles p ON p.user_id = r.from_user
-      WHERE r.to_user = $1 AND r.status = 'pending' AND ${NOT_BLOCKED}
-      ORDER BY r.created_at DESC`,
-    [userId],
-  );
-}
-
-export async function outgoingRequests(userId: string) {
-  return query<RequestRow>(
-    `SELECT ${PUBLIC_COLS}, r.id AS request_id, r.note, r.created_at
-       FROM connection_requests r JOIN profiles p ON p.user_id = r.to_user
-      WHERE r.from_user = $1 AND r.status IN ('pending', 'declined') AND ${NOT_BLOCKED}
-      ORDER BY r.created_at DESC`,
-    [userId],
-  );
-}
-
 export type ConnectionRow = PublicProfile & Contact & { connected_at: Date; event_name: string | null };
 
 export async function connections(userId: string) {
@@ -147,10 +124,10 @@ export async function connections(userId: string) {
 }
 
 export async function counts(userId: string) {
-  const rows = await query<{ incoming: number; connected: number }>(
+  const rows = await query<{ connected: number; met: number }>(
     `SELECT
-       (SELECT count(*)::int FROM connection_requests WHERE to_user = $1 AND status = 'pending') AS incoming,
-       (SELECT count(*)::int FROM connection_requests WHERE status = 'accepted' AND (from_user = $1 OR to_user = $1)) AS connected`,
+       (SELECT count(*)::int FROM connection_requests WHERE status = 'accepted' AND (from_user = $1 OR to_user = $1)) AS connected,
+       (SELECT count(DISTINCT a.to_user)::int FROM meetings a WHERE a.from_user = $1 AND ${CONFIRMED}) AS met`,
     [userId],
   );
   return rows[0];
@@ -161,37 +138,16 @@ export async function counts(userId: string) {
 
 export type Suggestion = Person & { reason: string; score: number };
 
-const has = (p: { intents: string[] }, id: string) => p.intents.includes(id);
-
-function score(me: PublicProfile, them: PublicProfile) {
-  const shared = them.stack.filter((s) => me.stack.includes(s));
-  const topic = shared[0] ?? roleLabel(them.role);
-  const reasons: [number, string][] = [];
-  if (has(me, "mentor_wanted") && has(them, "mentoring"))
-    reasons.push([5 + shared.length, `They mentor${topic ? ` in ${topic}` : ""}, and you're looking for a mentor.`]);
-  if (has(me, "mentoring") && has(them, "mentor_wanted"))
-    reasons.push([4 + shared.length, `They're looking for a mentor${topic ? ` in ${topic}` : ""}. You could help.`]);
-  if (has(me, "hiring") && has(them, "job_hunting")) reasons.push([5, `They're looking for a job, and you're hiring.`]);
-  if (has(me, "job_hunting") && has(them, "hiring")) reasons.push([5, `They're hiring, and you're looking for a job.`]);
-  if (has(me, "cofounder") && has(them, "cofounder")) reasons.push([4, `You're both looking for a co-founder.`]);
-  if (has(me, "collab") && has(them, "collab")) reasons.push([3, `You both want to build something together.`]);
-  if (has(me, "learning") && has(them, "learning") && shared.length)
-    reasons.push([3, `You're both learning ${shared[0]}.`]);
-  if (shared.length >= 2) reasons.push([shared.length, `You both work with ${shared.slice(0, 2).join(" and ")}.`]);
-  else if (shared.length === 1) reasons.push([1, `You both work with ${shared[0]}.`]);
-  if (me.role && me.role === them.role) reasons.push([1, `You're both into ${roleLabel(me.role).toLowerCase()}.`]);
-  if (!reasons.length) return null;
-  reasons.sort((a, b) => b[0] - a[0]);
-  return { score: reasons.reduce((s, [n]) => s + n, 0), reason: reasons[0][1] };
-}
+// Leaves out people I already want or am connected to. People who want me stay in:
+// leaving them out would give their want away.
+const UNDECIDED = `NOT EXISTS (SELECT 1 FROM connection_requests r
+  WHERE (r.from_user = $1 AND r.to_user = p.user_id) OR (r.status = 'accepted' AND r.from_user = p.user_id AND r.to_user = $1))`;
 
 export async function suggestions(me: PublicProfile, eventId: string, limit = 6): Promise<Suggestion[]> {
   const candidates = await query<Person>(
     `SELECT ${PUBLIC_COLS}, ${RELATION} FROM profiles p
-      WHERE p.onboarded AND p.listed AND p.user_id <> $1 AND ${NOT_BLOCKED}
+      WHERE p.onboarded AND p.listed AND p.user_id <> $1 AND ${NOT_BLOCKED} AND ${UNDECIDED}
         AND EXISTS (SELECT 1 FROM event_members m WHERE m.event_id = $2 AND m.user_id = p.user_id)
-        AND NOT EXISTS (SELECT 1 FROM connection_requests r
-                         WHERE (r.from_user = $1 AND r.to_user = p.user_id) OR (r.from_user = p.user_id AND r.to_user = $1))
       ORDER BY p.updated_at DESC LIMIT 2000`,
     [me.user_id, eventId],
   );
@@ -203,4 +159,74 @@ export async function suggestions(me: PublicProfile, eventId: string, limit = 6)
     .filter((s): s is Suggestion => s !== null)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// The deck: people Here at this event I haven't decided on yet, best first.
+
+export type DeckCard = Pick<PublicProfile, "user_id" | "handle" | "name" | "headline" | "role" | "level" | "intents" | "stack" | "color" | "photo_url"> & { reason: string };
+
+const DECK_SIZE = 40;
+
+export async function deck(me: PublicProfile, eventId: string): Promise<DeckCard[]> {
+  const rows = await query<PublicProfile & { wants_me: boolean }>(
+    `SELECT ${PUBLIC_COLS},
+            EXISTS (SELECT 1 FROM connection_requests w WHERE w.from_user = p.user_id AND w.to_user = $1 AND w.status = 'pending') AS wants_me
+       FROM event_members m JOIN profiles p ON p.user_id = m.user_id
+      WHERE m.event_id = $2 AND m.checked_in_at IS NOT NULL
+        AND p.onboarded AND p.listed AND p.user_id <> $1 AND ${NOT_BLOCKED} AND ${UNDECIDED}
+        AND NOT EXISTS (SELECT 1 FROM passes x WHERE x.event_id = $2 AND x.from_user = $1 AND x.to_user = p.user_id)
+      LIMIT 2000`,
+    [me.user_id, eventId],
+  );
+  const wantsMe = new Set(rows.filter((r) => r.wants_me).map((r) => r.user_id));
+  // Only card fields go to the browser: wants_me must never leave the server.
+  return rank(me, rows, wantsMe).slice(0, DECK_SIZE).map((p) => ({
+    user_id: p.user_id, handle: p.handle, name: p.name, headline: p.headline, role: p.role, level: p.level,
+    intents: p.intents, stack: p.stack, color: p.color, photo_url: p.photo_url, reason: p.reason,
+  }));
+}
+
+/** My connections who are Here at this event. Built from Here and Connection; nothing extra is stored. */
+export async function connectionsHere(userId: string, eventId: string) {
+  return query<Pick<PublicProfile, "user_id" | "handle" | "name" | "color" | "photo_url">>(
+    `SELECT p.user_id, p.handle, p.name, p.color, p.photo_url
+       FROM event_members m JOIN profiles p ON p.user_id = m.user_id
+      WHERE m.event_id = $2 AND m.checked_in_at IS NOT NULL AND p.user_id <> $1 AND ${NOT_BLOCKED}
+        AND EXISTS (SELECT 1 FROM connection_requests r WHERE r.status = 'accepted'
+                     AND ((r.from_user = $1 AND r.to_user = p.user_id) OR (r.from_user = p.user_id AND r.to_user = $1)))
+      ORDER BY m.checked_in_at DESC LIMIT 20`,
+    [userId, eventId],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Met: each person taps "We met"; it counts once both have, at an event both are Here at.
+
+export type MeetStatus = {
+  /** The latest event we're both Here at. Null: "We met" isn't possible right now. */
+  event: { id: string; name: string } | null;
+  state: "none" | "mine" | "theirs" | "both";
+  /** An earlier event where we met. */
+  earlier: string | null;
+};
+
+/** Their half only shows when we're connected: a one-sided "We met" between strangers stays private. */
+export async function meetStatus(me: string, other: string, connected: boolean): Promise<MeetStatus> {
+  const [together, claims] = await Promise.all([
+    eventsTogether(me, other),
+    query<{ event_id: string; name: string; mine: boolean; theirs: boolean }>(
+      `SELECT a.event_id, e.name, bool_or(a.from_user = $1) AS mine, bool_or(a.from_user = $2) AS theirs
+         FROM meetings a JOIN events e ON e.id = a.event_id
+        WHERE (a.from_user = $1 AND a.to_user = $2) OR (a.from_user = $2 AND a.to_user = $1)
+        GROUP BY a.event_id, e.name ORDER BY max(a.created_at) DESC`,
+      [me, other],
+    ),
+  ]);
+  const last = together.at(-1);
+  const event = last ? { id: last.id, name: last.name } : null;
+  const now = claims.find((c) => c.event_id === event?.id);
+  const earlier = claims.find((c) => c.event_id !== event?.id && c.mine && c.theirs)?.name ?? null;
+  const state = now?.mine && now.theirs ? "both" : now?.mine ? "mine" : now?.theirs && connected ? "theirs" : "none";
+  return { event, state, earlier };
 }

@@ -6,8 +6,9 @@ import { z } from "zod";
 import { currentUser } from "./auth";
 import { pool, query } from "./db";
 import { tidyCity } from "./cities";
-import { eventBySlug, isBanned, membership, newJoinCode, slugifyEvent } from "./events";
+import { eventBySlug, isBanned, membership, newCheckinKey, newJoinCode, slugifyEvent } from "./events";
 import { canCreateEvents, isAdmin } from "./organizers";
+import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
 import type { FormState } from "./actions";
@@ -87,9 +88,9 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
       slug = `${base}-${n}`;
     }
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO events (slug, name, city, starts_on, about, join_code, listed, community_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), e.listed, await communityFor(form, me), me.id],
+      `INSERT INTO events (slug, name, city, starts_on, about, join_code, checkin_key, listed, community_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), newCheckinKey(), e.listed, await communityFor(form, me), me.id],
     );
     await client.query("INSERT INTO event_members (event_id, user_id, role) VALUES ($1, $2, 'organizer')", [rows[0].id, me.id]);
     await client.query("COMMIT");
@@ -124,6 +125,37 @@ export async function joinByCode(_prev: FormState, form: FormData): Promise<Form
   const rows = await query<{ slug: string }>("SELECT slug FROM events WHERE join_code = $1", [code]);
   if (!rows[0]) return { error: "No event has that code. Check it with an organiser." };
   return joinEvent(rows[0].slug);
+}
+
+/**
+ * Here: the check-in code is shown only at the venue, so scanning it is what makes someone here.
+ * Joins the event too if needed. On the first check-in, connections already here hear about it.
+ */
+export async function checkIn(slug: string, key: string): Promise<FormState> {
+  const me = await signedIn();
+  const event = await eventBySlug(slug);
+  if (!event) return { error: "That event doesn't exist any more." };
+  if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
+  if (!(await allow(`checkin:${me.id}`, 20, 3600))) return { error: "Slow down a little and try again in a few minutes." };
+  const valid = await query("SELECT 1 FROM events WHERE id = $1 AND checkin_key = $2", [event.id, key.trim().toUpperCase()]);
+  if (!valid.length) return { error: "That check-in code has changed. Scan the one at the venue." };
+
+  const first =
+    (await query("UPDATE event_members SET checked_in_at = now() WHERE event_id = $1 AND user_id = $2 AND checked_in_at IS NULL RETURNING 1", [event.id, me.id])).length > 0 ||
+    (await query("INSERT INTO event_members (event_id, user_id, checked_in_at) VALUES ($1, $2, now()) ON CONFLICT DO NOTHING RETURNING 1", [event.id, me.id])).length > 0;
+  if (first) {
+    const here = await query<{ user_id: string }>(
+      `SELECT m.user_id FROM event_members m JOIN connection_requests r ON r.status = 'accepted'
+         AND ((r.from_user = $2 AND r.to_user = m.user_id) OR (r.from_user = m.user_id AND r.to_user = $2))
+        WHERE m.event_id = $1 AND m.checked_in_at IS NOT NULL AND m.user_id <> $2
+          AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker = $2 AND b.blocked = m.user_id) OR (b.blocker = m.user_id AND b.blocked = $2))`,
+      [event.id, me.id],
+    );
+    for (const { user_id } of here)
+      await notify(user_id, { title: `${me.name} is here too`, body: `You're both at ${event.name}. Say hi?`, url: `/chat/${me.handle}`, tag: `here-${me.id}-${event.id}` });
+  }
+  revalidatePath("/", "layout");
+  redirect(`/e/${slug}`);
 }
 
 export async function leaveEvent(slug: string): Promise<FormState> {
@@ -172,6 +204,13 @@ export async function newCode(slug: string): Promise<FormState> {
   await query("UPDATE events SET join_code = $2 WHERE id = $1", [event.id, newJoinCode()]);
   revalidatePath(`/e/${slug}/manage`);
   return { ok: "New code ready. The old code no longer works." };
+}
+
+export async function newCheckinCode(slug: string): Promise<FormState> {
+  const { event } = await organised(slug);
+  await query("UPDATE events SET checkin_key = $2 WHERE id = $1", [event.id, newCheckinKey()]);
+  revalidatePath(`/e/${slug}/manage`);
+  return { ok: "New check-in code ready. Put it back up at the venue: the old one no longer works." };
 }
 
 export async function setRole(slug: string, userId: string, role: "attendee" | "organizer"): Promise<FormState> {

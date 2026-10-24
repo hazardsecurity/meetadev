@@ -228,3 +228,44 @@ BEGIN
     INSERT INTO seed_runs (key) VALUES ('link-events-to-chapters-2');
   END IF;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- The core loop, five primitives:
+--   Person        profiles
+--   Here          event_members.checked_in_at, set by scanning the event's check-in code
+--   Want to meet  a pending connection_requests row: one-way, never shown to the person it's about
+--   Connection    the same row once both want to meet (accepted)
+--   Met           a meetings row from each of the two people for the same event
+
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_key text;
+UPDATE events SET checkin_key = upper(substr(md5(random()::text || id::text), 1, 10)) WHERE checkin_key IS NULL;
+ALTER TABLE event_members ADD COLUMN IF NOT EXISTS checked_in_at timestamptz;
+
+-- The deck's Pass: hides someone from my deck at this event only.
+CREATE TABLE IF NOT EXISTS passes (
+  event_id   uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  from_user  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (event_id, from_user, to_user)
+);
+
+-- One row per person who tapped "We met"; it counts once the other person's row exists too.
+CREATE TABLE IF NOT EXISTS meetings (
+  event_id   uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  from_user  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (event_id, from_user, to_user),
+  CHECK (from_user <> to_user)
+);
+CREATE INDEX IF NOT EXISTS meetings_pair_idx ON meetings (from_user, to_user);
+
+-- Requests became private wants with no decline: an old decline is a want that wasn't returned.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM seed_runs WHERE key = 'declines-become-wants') THEN
+    UPDATE connection_requests SET status = 'pending', responded_at = NULL WHERE status = 'declined';
+    INSERT INTO seed_runs (key) VALUES ('declines-become-wants');
+  END IF;
+END $$;

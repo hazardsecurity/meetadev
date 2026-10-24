@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { currentUser, endSession, safeNext } from "./auth";
 import { tidyCities } from "./cities";
 import { query } from "./db";
+import { eventsTogether } from "./events";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
-import { firstError, noteSchema, profileSchema, type ProfileInput } from "./validation";
+import { firstError, profileSchema, type ProfileInput } from "./validation";
 
 // `values` echoes what was submitted so a form can refill itself after an error
 // (React resets uncontrolled forms once an action finishes).
@@ -71,73 +72,110 @@ async function blockedBetween(a: string, b: string) {
   return rows.length > 0;
 }
 
-export async function sendRequest(toUserId: string, note: string): Promise<FormState> {
+/** An event both people are in: the one named by `slug`, else the one they most recently joined together. */
+async function sharedEvent(me: string, other: string, slug?: string) {
+  const rows = await query<{ id: string; slug: string; name: string }>(
+    `SELECT e.id, e.slug, e.name FROM event_members x JOIN event_members y ON x.event_id = y.event_id JOIN events e ON e.id = x.event_id
+      WHERE x.user_id = $1 AND y.user_id = $2 AND ($3::text IS NULL OR e.slug = $3)
+      ORDER BY x.joined_at DESC LIMIT 1`,
+    [me, other, slug ?? null],
+  );
+  return rows[0] ?? null;
+}
+
+/** Record that `me` wants to meet `other`. Returns "connected" when it makes the want mutual. */
+async function recordWant(me: string, other: string, eventId: string) {
+  // Theirs already exists: this makes it a connection, credited to the event where it became mutual.
+  const reverse = await query(
+    `UPDATE connection_requests SET status = 'accepted', responded_at = now(), event_id = $3
+      WHERE from_user = $1 AND to_user = $2 AND status = 'pending' RETURNING id`,
+    [other, me, eventId],
+  );
+  if (reverse.length) return "connected";
+  await query(
+    `INSERT INTO connection_requests (from_user, to_user, event_id) VALUES ($1, $2, $3)
+     ON CONFLICT (from_user, to_user) DO NOTHING`,
+    [me, other, eventId],
+  );
+  const mine = await query<{ status: string }>("SELECT status FROM connection_requests WHERE from_user = $1 AND to_user = $2", [me, other]);
+  return mine[0]?.status === "accepted" ? "already" : "wanted";
+}
+
+// These actions don't revalidate: the deck, buttons and We met bar update in place, and every page
+// that shows wants, connections or meetings is rendered fresh on the next visit.
+
+/** Meet: private until the other person wants to meet too. Only the mutual moment is announced. */
+export async function wantToMeet(toUserId: string, slug?: string): Promise<FormState> {
   const me = await member();
   if (toUserId === me.id) return { error: "That's you!" };
-  const cleanNote = noteSchema.safeParse(note);
-  if (!cleanNote.success) return { error: "Keep your note under 200 characters." };
-  if (await blockedBetween(me.id, toUserId)) return { error: "You can't connect with this person." };
-  // Only people at the same event can reach each other; remember which one.
-  const shared = await query<{ event_id: string }>(
-    `SELECT x.event_id FROM event_members x JOIN event_members y ON x.event_id = y.event_id
-      WHERE x.user_id = $1 AND y.user_id = $2 ORDER BY x.joined_at DESC LIMIT 1`,
-    [me.id, toUserId],
-  );
-  if (!shared[0]) return { error: "You can only connect with people at the same event." };
+  if (await blockedBetween(me.id, toUserId)) return { error: "You can't meet this person." };
+  const event = await sharedEvent(me.id, toUserId, slug);
+  if (!event) return { error: "You can only meet people at the same event." };
+  // Generous: the deck makes many quick choices. This only stops scripts.
+  if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
 
-  // They already asked us: sending back counts as accepting.
-  const reverse = await query<{ id: string }>(
-    `UPDATE connection_requests SET status = 'accepted', responded_at = now()
-      WHERE from_user = $1 AND to_user = $2 AND status = 'pending' RETURNING id`,
-    [toUserId, me.id],
-  );
-  if (reverse[0]) {
-    await notify(toUserId, { title: "You're connected! 🤝", body: `${me.name} accepted. Say hi!`, url: `/chat/${me.handle}`, tag: `connected-${me.id}` });
-    revalidatePath("/", "layout");
-    return { ok: "connected" };
-  }
-
-  if (!(await allow(`connect:${me.id}`, 40, 86_400)))
-    return { error: "You've sent 40 requests today. Give people time to reply, then try again tomorrow." };
-
-  const created = await query(
-    `INSERT INTO connection_requests (from_user, to_user, note, event_id) VALUES ($1, $2, $3, $4)
-     ON CONFLICT (from_user, to_user) DO NOTHING RETURNING id`,
-    [me.id, toUserId, cleanNote.data, shared[0].event_id],
-  );
-  if (created.length)
-    await notify(toUserId, {
-      title: `${me.name} wants to connect`,
-      body: cleanNote.data || "Open meetadev to accept or decline.",
-      url: "/requests",
-      tag: `request-${me.id}`,
-    });
-  revalidatePath("/", "layout");
-  return { ok: "sent" };
+  const result = await recordWant(me.id, toUserId, event.id);
+  if (result === "connected")
+    await notify(toUserId, { title: "It's a match", body: `You and ${me.name} both want to meet. Say hi.`, url: `/chat/${me.handle}`, tag: `match-${me.id}` });
+  return { ok: result === "wanted" ? "wanted" : "connected" };
 }
 
-export async function respondToRequest(requestId: string, accept: boolean): Promise<FormState> {
+export async function undoWant(toUserId: string): Promise<FormState> {
   const me = await member();
-  const rows = await query<{ from_user: string }>(
-    `UPDATE connection_requests SET status = $3, responded_at = now()
-      WHERE id = $1 AND to_user = $2 AND status = 'pending' RETURNING from_user`,
-    [requestId, me.id, accept ? "accepted" : "declined"],
-  );
-  // Only acceptances are announced; a decline stays silent.
-  if (accept && rows[0])
-    await notify(rows[0].from_user, { title: "You're connected! 🤝", body: `${me.name} accepted your request. Say hi!`, url: `/chat/${me.handle}`, tag: `connected-${me.id}` });
-  revalidatePath("/", "layout");
-  return rows.length ? { ok: accept ? "accepted" : "declined" } : { error: "That request is no longer there." };
+  await query("DELETE FROM connection_requests WHERE from_user = $1 AND to_user = $2 AND status = 'pending'", [me.id, toUserId]);
+  return { ok: "undone" };
 }
 
-export async function cancelRequest(toUserId: string): Promise<FormState> {
+/** Pass: hides them from my deck at this event only. */
+export async function pass(slug: string, userId: string): Promise<FormState> {
   const me = await member();
-  await query("DELETE FROM connection_requests WHERE from_user = $1 AND to_user = $2 AND status <> 'accepted'", [
-    me.id,
-    toUserId,
-  ]);
-  revalidatePath("/", "layout");
-  return { ok: "cancelled" };
+  const event = await sharedEvent(me.id, userId, slug);
+  if (!event) return { error: "They're not at this event any more." };
+  if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
+  await query("INSERT INTO passes (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, userId]);
+  return { ok: "passed" };
+}
+
+/** Undo the deck's last choice about someone: their pass, or a want that isn't mutual yet. */
+export async function undoSwipe(slug: string, userId: string): Promise<FormState> {
+  const me = await member();
+  await query("DELETE FROM passes WHERE from_user = $1 AND to_user = $2 AND event_id = (SELECT id FROM events WHERE slug = $3)", [me.id, userId, slug]);
+  await query("DELETE FROM connection_requests WHERE from_user = $1 AND to_user = $2 AND status = 'pending'", [me.id, userId]);
+  return { ok: "undone" };
+}
+
+/**
+ * "We met": my half of a meeting at the latest event we're both Here at. It counts once they tap it too.
+ * Meeting someone means wanting to meet them, so it also records my want, which may connect us.
+ */
+export async function weMet(otherId: string): Promise<FormState> {
+  const me = await member();
+  if (otherId === me.id) return { error: "That's you!" };
+  if (await blockedBetween(me.id, otherId)) return { error: "You can't meet this person." };
+  const event = (await eventsTogether(me.id, otherId)).at(-1);
+  if (!event) return { error: "We met counts when you've both checked in at the same event." };
+  if (!(await allow(`met:${me.id}`, 100, 86_400))) return { error: "That's a lot of meetings for one day. Try again tomorrow." };
+
+  await query("INSERT INTO meetings (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, otherId]);
+  const want = await recordWant(me.id, otherId, event.id);
+  const theirs = await query("SELECT 1 FROM meetings WHERE event_id = $1 AND from_user = $2 AND to_user = $3", [event.id, otherId, me.id]);
+  if (theirs.length)
+    await notify(otherId, { title: `You and ${me.name} met`, body: `+1 on the ${event.name} leaderboard.`, url: `/e/${event.slug}/leaderboard`, tag: `met-${me.id}` });
+  // Their half stays private until they're connected to us; once they are, nudge them.
+  else if (want !== "wanted")
+    await notify(otherId, { title: `${me.name} says you two met`, body: "Tap We met if you did.", url: `/chat/${me.handle}`, tag: `met-${me.id}` });
+  return { ok: theirs.length ? "met" : "waiting" };
+}
+
+/** Take back my "We met" while it's still one-sided. */
+export async function undoMet(otherId: string): Promise<FormState> {
+  const me = await member();
+  await query(
+    `DELETE FROM meetings a WHERE a.from_user = $1 AND a.to_user = $2
+       AND NOT EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = $2 AND b.to_user = $1)`,
+    [me.id, otherId],
+  );
+  return { ok: "undone" };
 }
 
 export async function removeConnection(otherId: string): Promise<FormState> {

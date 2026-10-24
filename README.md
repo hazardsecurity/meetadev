@@ -2,9 +2,25 @@
 
 Networking for DevFest & GDG events.
 
-Organisers create a space for their DevFest or GDG event. Attendees join it with a link or code, and find the people they should meet there (mentors, learners, people hiring, future co-founders). Contacts are swapped only when both people say yes.
+Organisers create a space for their DevFest or GDG event. Attendees join it with a link or code, check in at the venue, and swipe through the people who are there (mentors, learners, people hiring, future co-founders). When two people both tap Meet, they can chat, find each other, and both tap We met.
 
 Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, suggests matches, and reacts as you go.
+
+## The core loop
+
+Everything is built from five primitives. A new feature should be one of these, or read them back; it shouldn't add a second way to do the same thing.
+
+| Primitive | Stored as | Rule |
+|---|---|---|
+| **Person** | `profiles` | One badge, reused at every event. |
+| **Here** | `event_members.checked_in_at` | Set by scanning the event's check-in code (`/e/<slug>/checkin?k=…`), shown only at the venue. Joining isn't being here. |
+| **Want to meet** | a `pending` row in `connection_requests` | One-way and private: never shown or sent to the person it's about. |
+| **Connection** | the same row, `accepted` | Both want to meet. The only moment anyone is told. Unlocks chat and contact details. |
+| **Met** | a `meetings` row from each person for the same event | Each taps We met; it counts once both have, at an event both are here at. |
+
+The deck's Pass (`passes`) only hides someone from your deck at that event. "Your people here" is Here plus Connection: nothing extra is stored.
+
+The one number: of the matches made at an event, how many became meetings.
 
 ## For organisers
 
@@ -12,8 +28,9 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 - **Create an event** once approved: name, city (required), date, welcome note. The creator becomes its organiser.
 - **Show in "Find events"** (on by default): people who follow the event's city see it at `/discover`.
 - **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code. "Show on screen" opens a full-screen join slide for the projector.
+- **Check-in code**: a second QR, for the venue only (posters, the welcome screen: "Show on screen" opens `/e/<slug>/screen?show=checkin`). Scanning it is what makes someone here, and only people who are here show up in the deck. "Make a new code" stops the old one working.
 - **Joining is open**: anyone signed in can join from the event page. The invite link and code are shortcuts, not a lock. "Make a new code" stops the old code working.
-- **Dashboard** at `/e/<slug>/manage`: people joined, connections made, mentors vs. people wanting one, reports, members.
+- **Dashboard** at `/e/<slug>/manage`: the funnel (joined, here, swiped, matched, met), reports, members with when they checked in and how many people they've met, filterable to who's here.
 - **Members**: make co-organisers, remove someone (they can rejoin), or ban them from the event.
 - **Reports** filed by people at your event land in your dashboard.
 
@@ -35,14 +52,17 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 
 - **Follow cities**: during onboarding and on `/discover`, add every city you go to events in. "Find events" lists upcoming listed events in all of them. Anyone can search `/discover?city=Lagos` without signing in.
 - **One badge for every event**: role, level, what you're here for, stack, intro, private contact, public links.
-- **Events**: join with an invite link or a code; switch between events from the top bar. The directory, suggestions and requests are limited to people at the same event.
+- **Events**: join with an invite link or a code; switch between events from the top bar. The deck, directory and suggestions are limited to people at the same event.
+- **Deck**: once checked in, the event opens on a deck of the people who are here, best match first, each with the reason. Meet, Pass (hidden for this event only), Undo; drag, tap, or use the arrow keys. People who already want to meet you rank a little higher, and nothing says so.
 - **"People you should meet"**: matches mentors with people who want a mentor, hiring with job hunting, co-founder with co-founder, shared stack, and so on. Every suggestion says why.
 - **Directory** with search and filters (role, level, intent, stack) plus quick filters.
-- **Connection requests** with an optional note. If two people request each other, they connect automatically.
-- **Private contact details**: WhatsApp, phone and email are only sent to the browser once a request is accepted. A declined request still looks "sent" to the sender.
-- **My badge**: a QR code that opens your profile, for connecting in person; profile strength meter.
+- **Meet** (deck or directory) is private until it's mutual: no requests, no notes, no declines. A match notifies the other person and opens chat.
+- **We met**: in the chat, or on a profile after scanning someone's badge. It counts once both tap it, and the leaderboard ranks people met in person.
+- **Your people here**: when you check in, connections who are already here get a ping, and the deck shows who's here. Never between events.
+- **Private contact details**: WhatsApp, phone and email are only sent to the browser once you're connected.
+- **My badge**: a QR code that opens your profile, for meeting in person; profile strength meter.
 - **Contacts**: one-tap WhatsApp, a 10-person goal, and "Save all to phone" (.vcf export).
-- **Safety**: block, report, hide from the directory, rate limits (sign-ups, logins, 40 requests/day).
+- **Safety**: block, report, hide from the directory, rate limits (sign-ups, logins, 300 Meet or Pass choices and 100 We met taps a day).
 - **Sign in with Google only.** No passwords. First sign-in creates the account (name and photo come from Google), and later sign-ins go straight back in.
 
 ## Run locally
@@ -51,7 +71,7 @@ Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, sugge
 cp .env.example .env.local   # set DATABASE_URL to a Postgres database
 npm install
 npm run migrate
-npm run seed:demo            # optional: a demo event (/e/demo-devfest, code DEMO26) with 8 made-up attendees
+npm run seed:demo            # optional: a demo event (/e/demo-devfest, code DEMO26) with 8 made-up attendees, all checked in
 npm run dev
 ```
 

@@ -27,7 +27,8 @@ export function proxy(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  if (eventPath)
+  // Page loads only: a cookie set on a server action's POST makes Next re-render the page, which resets the deck.
+  if (eventPath && request.method === "GET")
     response.cookies.set(EVENT_COOKIE, eventPath[1], { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 90 });
   return response;
 }

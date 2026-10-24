@@ -37,7 +37,6 @@ export const profileSchema = z.object({
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 
-export const noteSchema = trimmed(200);
 
 export function firstError(error: z.ZodError) {
   return error.issues[0]?.message ?? "Something in the form isn't right.";

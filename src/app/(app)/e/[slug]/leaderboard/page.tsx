@@ -20,14 +20,14 @@ export default async function LeaderboardPage({ params }: PageProps<"/e/[slug]/l
   const leader = rows[0];
 
   let line: string;
-  if (!rows.length) line = "Nobody has connected yet. Send the first request and you'll be top of the board!";
+  if (!rows.length) line = "Nobody has met in person yet. Match with someone, find them, and both tap We met to top the board!";
   else if (mine?.rank === 1) line = `${first}, you're number one! Keep saying hi.`;
   else if (mine) {
     // The closest score above yours: beat it by one to move up a place.
-    const above = [...rows].reverse().find((r) => r.connections > mine.connections) ?? leader;
-    const gap = above.connections - mine.connections + 1;
-    line = `You're #${mine.rank}. ${gap} more ${gap === 1 ? "connection" : "connections"} to move up!`;
-  } else line = "You're not on the board yet. One accepted connection gets you on it.";
+    const above = [...rows].reverse().find((r) => r.met > mine.met) ?? leader;
+    const gap = above.met - mine.met + 1;
+    line = `You're #${mine.rank}. Meet ${gap} more ${gap === 1 ? "person" : "people"} to move up!`;
+  } else line = "You're not on the board yet. Meet one person and both tap We met to get on it.";
 
   return (
     <div className="stack narrow" style={{ "--gap": "24px" } as React.CSSProperties}>
@@ -49,7 +49,7 @@ export default async function LeaderboardPage({ params }: PageProps<"/e/[slug]/l
         </>
       )}
 
-      <p className="hint">Counts connections accepted at this event. People hidden from the directory aren&apos;t shown.</p>
+      <p className="hint">Counts people met in person at this event: both have to tap We met. People hidden from the directory aren&apos;t shown.</p>
     </div>
   );
 }

@@ -5,10 +5,11 @@ import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { ConnectButton } from "@/components/ConnectButton";
+import { MetBar } from "@/components/MetBar";
 import { SafetyMenu } from "@/components/SafetyMenu";
 import { requireMember } from "@/lib/auth";
 import { publicLinks, telLink, waLink } from "@/lib/links";
-import { profileByHandle } from "@/lib/people";
+import { meetStatus, profileByHandle } from "@/lib/people";
 
 export const metadata: Metadata = { title: "Profile", robots: { index: false } };
 
@@ -20,6 +21,9 @@ export default async function ProfilePage({ params }: PageProps<"/p/[handle]">) 
   const { person: p, contact } = found;
   const first = p.name.split(" ")[0];
   const links = publicLinks(p);
+  const connected = p.relation === "connected";
+  // Badge scans land here, so this is where two people who just met tap We met.
+  const met = p.relation === "self" ? null : await meetStatus(me.id, p.user_id, connected);
 
   return (
     <div className="profile">
@@ -66,16 +70,15 @@ export default async function ProfilePage({ params }: PageProps<"/p/[handle]">) 
         ) : (
           <div className="card stack">
             <AyoSays mood={p.relation === "outgoing" ? "thinking" : "happy"} size={72}>
-              {p.relation === "incoming"
-                ? `${first} wants to connect with you!`
-                : p.relation === "outgoing"
-                  ? `Waiting for ${first} to say yes. Their contact details show up here once they do.`
-                  : `Connect with ${first} to swap contact details. They'll see your request and decide.`}
+              {p.relation === "outgoing"
+                ? `You want to meet ${first}. They'll only find out if they want to meet you too, and then you can chat.`
+                : `Want to meet ${first}? It stays private unless they want to meet you too.`}
             </AyoSays>
-            <ConnectButton userId={p.user_id} requestId={p.request_id} relation={p.relation} firstName={first} withNote />
+            <ConnectButton userId={p.user_id} relation={p.relation} firstName={first} />
           </div>
         )}
-        {p.relation !== "self" && <SafetyMenu userId={p.user_id} firstName={first} connected={p.relation === "connected"} />}
+        {met && <MetBar otherId={p.user_id} firstName={first} status={met} connected={connected} />}
+        {p.relation !== "self" && <SafetyMenu userId={p.user_id} firstName={first} connected={connected} />}
       </aside>
     </div>
   );

@@ -15,7 +15,10 @@ type Msg = Message & { pending?: boolean };
 const dayKey = (iso: string) => iso.slice(0, 10);
 const byTime = (a: Msg, b: Msg) => a.created_at.localeCompare(b.created_at);
 
-export function ChatThread({ me, other, firstName, initial }: { me: string; other: string; firstName: string; initial: Msg[] }) {
+/** `events`: events we were both checked in at, oldest first; a line names each one where the conversation reaches it. */
+export function ChatThread({ me, other, firstName, initial, events = [] }: {
+  me: string; other: string; firstName: string; initial: Msg[]; events?: { name: string; at: string }[];
+}) {
   const [messages, setMessages] = useState<Msg[]>(initial);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
@@ -88,6 +91,9 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
     });
   };
 
+  // Both sides are UTC ISO strings, so comparing them as text compares the times.
+  const eventAt = (iso: string) => events.filter((e) => e.at <= iso).at(-1)?.name ?? null;
+
   return (
     <div className="chat">
       <div className="card chat__push"><PushToggle compact /></div>
@@ -98,8 +104,11 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
         {messages.map((m, n) => {
           const mine = m.from_user === me;
           const newDay = n === 0 || dayKey(messages[n - 1].created_at) !== dayKey(m.created_at);
+          const event = eventAt(m.created_at);
+          const newEvent = event !== null && (n === 0 || eventAt(messages[n - 1].created_at) !== event);
           return (
             <div key={m.id}>
+              {newEvent && <p className="chat__event">{event}</p>}
               {newDay && <p className="chat__day"><LocalTime iso={m.created_at} format="day" /></p>}
               <div className={`msg ${mine ? "msg--me" : "msg--them"} ${m.pending ? "is-pending" : ""}`}>
                 <p>{m.body}</p>

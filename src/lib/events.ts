@@ -22,7 +22,10 @@ const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-
 
 // No 0/O/1/I so codes survive being read off a projector.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-export const newJoinCode = () => Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+const randomCode = (n: number) => Array.from({ length: n }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+export const newJoinCode = () => randomCode(6);
+// Longer than the join code: it's only ever scanned, and it's what makes someone "here".
+export const newCheckinKey = () => randomCode(10);
 
 export const slugifyEvent = (name: string) => slugify(name, 40) || "event";
 
@@ -38,6 +41,18 @@ export const membership = cache(async (eventId: string, userId: string) => {
   ]);
   return rows[0]?.role ?? null;
 });
+
+/** Here: checked in with the event's check-in code. */
+export async function isHere(eventId: string, userId: string) {
+  const rows = await query("SELECT 1 FROM event_members WHERE event_id = $1 AND user_id = $2 AND checked_in_at IS NOT NULL", [eventId, userId]);
+  return rows.length > 0;
+}
+
+/** Kept off `Event` so it never reaches a page that isn't the organiser's. */
+export async function checkinKey(eventId: string) {
+  const rows = await query<{ checkin_key: string }>("SELECT checkin_key FROM events WHERE id = $1", [eventId]);
+  return rows[0]?.checkin_key ?? "";
+}
 
 export async function isBanned(eventId: string, userId: string) {
   const rows = await query("SELECT 1 FROM event_bans WHERE event_id = $1 AND user_id = $2", [eventId, userId]);
@@ -78,6 +93,22 @@ export async function allEvents() {
   );
 }
 
+/** Events two people were both Here at, in the order they were there together. */
+export async function eventsTogether(a: string, b: string) {
+  return query<{ id: string; slug: string; name: string; at: Date }>(
+    `SELECT e.id, e.slug, e.name, greatest(x.checked_in_at, y.checked_in_at) AS at
+       FROM event_members x JOIN event_members y ON y.event_id = x.event_id JOIN events e ON e.id = x.event_id
+      WHERE x.user_id = $1 AND y.user_id = $2 AND x.checked_in_at IS NOT NULL AND y.checked_in_at IS NOT NULL
+      ORDER BY at`,
+    [a, b],
+  );
+}
+
+export async function hereCount(eventId: string) {
+  const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1 AND checked_in_at IS NOT NULL", [eventId]);
+  return rows[0].n;
+}
+
 export async function memberCount(eventId: string) {
   const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1", [eventId]);
   return rows[0].n;
@@ -95,29 +126,40 @@ export type MemberRow = {
   color: number;
   role: MemberRole;
   joined_at: Date;
+  checked_in_at: Date | null;
+  met: number;
   onboarded: boolean;
 };
 
+/** Met, as SQL: "a" is a row in meetings, and it counts once the other person's row exists too. */
+export const CONFIRMED = `EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = a.to_user AND b.to_user = a.from_user)`;
+
 export async function members(eventId: string) {
   return query<MemberRow>(
-    `SELECT p.user_id, p.handle, p.name, p.headline, p.photo_url, p.color, m.role, m.joined_at, p.onboarded
+    `SELECT p.user_id, p.handle, p.name, p.headline, p.photo_url, p.color, m.role, m.joined_at, m.checked_in_at, p.onboarded,
+            (SELECT count(*)::int FROM meetings a WHERE a.event_id = $1 AND a.from_user = m.user_id AND ${CONFIRMED}) AS met
        FROM event_members m JOIN profiles p ON p.user_id = m.user_id
       WHERE m.event_id = $1
-      ORDER BY (m.role = 'organizer') DESC, m.joined_at DESC`,
+      ORDER BY (m.role = 'organizer') DESC, m.checked_in_at DESC NULLS LAST, m.joined_at DESC`,
     [eventId],
   );
 }
 
+/** The funnel: people at each step of the loop, plus matches and meetings as pairs. */
 export async function eventStats(eventId: string) {
-  const rows = await query<{ members: number; connections: number; pending: number; mentors: number; mentees: number }>(
+  const rows = await query<{ joined: number; here: number; swiped: number; matched: number; met: number; matches: number; meetings: number }>(
     `SELECT
-       (SELECT count(*)::int FROM event_members WHERE event_id = $1) AS members,
-       (SELECT count(*)::int FROM connection_requests WHERE event_id = $1 AND status = 'accepted') AS connections,
-       (SELECT count(*)::int FROM connection_requests WHERE event_id = $1 AND status = 'pending') AS pending,
-       (SELECT count(*)::int FROM event_members m JOIN profiles p ON p.user_id = m.user_id
-         WHERE m.event_id = $1 AND 'mentoring' = ANY(p.intents)) AS mentors,
-       (SELECT count(*)::int FROM event_members m JOIN profiles p ON p.user_id = m.user_id
-         WHERE m.event_id = $1 AND 'mentor_wanted' = ANY(p.intents)) AS mentees`,
+       (SELECT count(*)::int FROM event_members WHERE event_id = $1) AS joined,
+       (SELECT count(*)::int FROM event_members WHERE event_id = $1 AND checked_in_at IS NOT NULL) AS here,
+       -- Whoever made a want mutual chose Meet too, but has no row of their own: count them via to_user.
+       (SELECT count(*)::int FROM (SELECT from_user FROM passes WHERE event_id = $1
+                                    UNION SELECT from_user FROM connection_requests WHERE event_id = $1
+                                    UNION SELECT to_user FROM connection_requests WHERE event_id = $1 AND status = 'accepted') s) AS swiped,
+       (SELECT count(*)::int FROM (SELECT from_user AS u FROM connection_requests WHERE event_id = $1 AND status = 'accepted'
+                                    UNION SELECT to_user FROM connection_requests WHERE event_id = $1 AND status = 'accepted') s) AS matched,
+       (SELECT count(DISTINCT a.from_user)::int FROM meetings a WHERE a.event_id = $1 AND ${CONFIRMED}) AS met,
+       (SELECT count(*)::int FROM connection_requests WHERE event_id = $1 AND status = 'accepted') AS matches,
+       (SELECT (count(*) / 2)::int FROM meetings a WHERE a.event_id = $1 AND ${CONFIRMED}) AS meetings`,
     [eventId],
   );
   return rows[0];
@@ -176,7 +218,7 @@ export async function knownCities() {
 }
 
 // ---------------------------------------------------------------------------
-// Leaderboard: accepted connections made at this event, per person.
+// Leaderboard: people met in person at this event (both tapped We met), per person.
 // People hidden from the directory are left off.
 
 export type LeaderRow = {
@@ -186,24 +228,22 @@ export type LeaderRow = {
   headline: string;
   photo_url: string;
   color: number;
-  connections: number;
+  met: number;
   rank: number;
 };
 
 const LEADER_CTE = `
   WITH c AS (
-    SELECT from_user AS u FROM connection_requests WHERE event_id = $1 AND status = 'accepted'
-    UNION ALL
-    SELECT to_user FROM connection_requests WHERE event_id = $1 AND status = 'accepted'
+    SELECT a.from_user AS u FROM meetings a WHERE a.event_id = $1 AND ${CONFIRMED}
   ), scored AS (
-    SELECT p.user_id, p.name, p.handle, p.headline, p.photo_url, p.color, count(*)::int AS connections
+    SELECT p.user_id, p.name, p.handle, p.headline, p.photo_url, p.color, count(*)::int AS met
       FROM c
       JOIN profiles p ON p.user_id = c.u
       JOIN event_members m ON m.event_id = $1 AND m.user_id = c.u
      WHERE p.listed
      GROUP BY p.user_id
   ), ranked AS (
-    SELECT *, rank() OVER (ORDER BY connections DESC)::int AS rank FROM scored
+    SELECT *, rank() OVER (ORDER BY met DESC)::int AS rank FROM scored
   )`;
 
 export async function leaderboard(eventId: string, limit = 50) {

@@ -18,7 +18,7 @@ const STEPS: Step[] = [
   { key: "intents", say: () => "What are you hoping to get from events like this? Pick all that fit.", valid: (p) => p.intents.length > 0 },
   { key: "stack", say: () => "What do you work with, or want to learn? I'll match you with people who share it.", mood: "thinking", valid: () => true },
   { key: "about", say: () => "Give people a one-line hello so they know who to look out for.", valid: (p) => p.name.trim().length >= 2 },
-  { key: "contact", say: () => "How should your connections reach you? Only people you accept will see this.", mood: "wink",
+  { key: "contact", say: () => "How should your connections reach you? Only people you both want to meet will see this.", mood: "wink",
     valid: (p) => !!(p.whatsapp || p.phone || p.contact_email) },
   { key: "links", say: () => "Last one! Public links people at your events can see. All optional.", mood: "excited", valid: () => true },
 ];
@@ -143,7 +143,7 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
 
             {step.key === "contact" && (
               <div className="stack">
-                <p className="lock-note"><span aria-hidden>🔒</span> Private. Only shown to people after <strong>you</strong> accept them, or they accept you.</p>
+                <p className="lock-note"><span aria-hidden>🔒</span> Private. Only shown to people once you <strong>both</strong> tap Meet.</p>
                 <Field id="whatsapp" label="WhatsApp number" type="tel" placeholder="+234 801 234 5678" value={p.whatsapp} onChange={(v) => set("whatsapp", v)} max={24} autoComplete="tel" />
                 <Field id="phone" label="Phone number (if different)" type="tel" value={p.phone} onChange={(v) => set("phone", v)} max={24} />
                 <Field id="contact_email" label="Email for contacts" type="email" value={p.contact_email} onChange={(v) => set("contact_email", v)} max={120} autoComplete="email" />

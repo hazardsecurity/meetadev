@@ -4,7 +4,7 @@ import { Avatar } from "./Avatar";
 import { IntentChips, roleLine } from "./Chips";
 import { ConnectButton } from "./ConnectButton";
 
-export function PersonCard({ person, reason }: { person: Person; reason?: string }) {
+export function PersonCard({ person, reason, slug }: { person: Person; reason?: string; slug?: string }) {
   return (
     <article className="person">
       <Link href={`/p/${person.handle}`} className="person__head">
@@ -22,7 +22,7 @@ export function PersonCard({ person, reason }: { person: Person; reason?: string
           {reason}
         </p>
       )}
-      <ConnectButton userId={person.user_id} requestId={person.request_id} relation={person.relation} firstName={person.name.split(" ")[0]} />
+      <ConnectButton userId={person.user_id} relation={person.relation} firstName={person.name.split(" ")[0]} slug={slug} />
     </article>
   );
 }

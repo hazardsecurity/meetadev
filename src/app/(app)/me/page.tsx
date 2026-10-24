@@ -66,7 +66,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
 
         <div className="stats">
           <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>
-          <Link href="/requests" className="card stat"><strong>{c.incoming}</strong><span>New requests</span></Link>
+          <div className="card stat"><strong>{c.met}</strong><span>People met</span></div>
         </div>
 
         <div className="row" style={{ justifyContent: "space-between" }}>
