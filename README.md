@@ -1,4 +1,4 @@
-# meetadev
+# MeetaDev
 
 Networking for DevFest & GDG events.
 
