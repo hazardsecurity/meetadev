@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Google_Sans, Google_Sans_Code } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import "./globals.css";
 
 const sans = Google_Sans({ variable: "--font-google-sans", subsets: ["latin"] });
@@ -22,7 +23,10 @@ export const viewport: Viewport = { themeColor: "#ffffff" };
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${sans.variable} ${code.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <UpdateBanner />
+      </body>
     </html>
   );
 }
