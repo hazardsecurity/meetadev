@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { dismissReport, leaveEvent, newCode, removeMember, setRole } from "@/lib/event-actions";
+import { deleteEvent, dismissReport, leaveEvent, newCode, removeMember, setRole } from "@/lib/event-actions";
 import type { MemberRow, ReportRow } from "@/lib/events";
 import { Avatar } from "./Avatar";
 
@@ -126,5 +126,37 @@ export function LeaveEvent({ slug, name }: { slug: string; name?: string }) {
       </button>
       {msg && <p className="error" role="alert">{msg}</p>}
     </div>
+  );
+}
+
+export function DeleteEvent({ slug, name }: { slug: string; name: string }) {
+  const { msg, pending, run } = useAct();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const matches = typed.trim().toLowerCase() === name.trim().toLowerCase();
+  if (!open)
+    return (
+      <button className="btn btn--white btn--sm danger" style={{ justifySelf: "start" }} onClick={() => setOpen(true)}>
+        Delete this event…
+      </button>
+    );
+  return (
+    <form className="stack" style={{ "--gap": "10px" } as React.CSSProperties}
+      onSubmit={(e) => { e.preventDefault(); if (matches) run(() => deleteEvent(slug, typed)); }}>
+      <p>
+        This removes <strong>{name}</strong> for everyone: its people list, leaderboard, join code and reports.
+        Connections people made here stay. <strong>It can&apos;t be undone.</strong>
+      </p>
+      <div className="field">
+        <label htmlFor="confirm-name">Type the event&apos;s name to confirm</label>
+        <input id="confirm-name" className="input" autoComplete="off" value={typed} placeholder={name}
+          onChange={(e) => setTyped(e.target.value)} />
+      </div>
+      <div className="row">
+        <button className="btn btn--red btn--sm" disabled={!matches || pending}>{pending ? "Deleting…" : "Delete forever"}</button>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setOpen(false); setTyped(""); }}>Cancel</button>
+      </div>
+      {msg && <p className="error" role="alert">{msg}</p>}
+    </form>
   );
 }

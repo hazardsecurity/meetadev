@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AyoSays } from "@/components/Ayo";
 import { EventForm } from "@/components/EventForms";
 import { InviteQR } from "@/components/InviteQR";
-import { CodeTools, LeaveEvent, MemberList, Reports } from "@/components/OrganiserTools";
+import { CodeTools, DeleteEvent, LeaveEvent, MemberList, Reports } from "@/components/OrganiserTools";
 import { requireMember } from "@/lib/auth";
 import { eventCommunityOptions } from "@/lib/communities";
 import { eventBySlug, eventReports, eventStats, members, membership } from "@/lib/events";
@@ -18,9 +18,11 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
   const me = await requireMember(`/e/${slug}/manage`);
   const event = await eventBySlug(slug);
   if (!event) notFound();
-  if ((await membership(event.id, me.id)) !== "organizer") redirect(`/e/${slug}`);
+  const role = await membership(event.id, me.id);
+  const admin = isAdmin(me);
+  if (role !== "organizer" && !admin) redirect(`/e/${slug}`);
 
-  const [stats, list, reports, communities] = await Promise.all([eventStats(event.id), members(event.id), eventReports(event.id), eventCommunityOptions(me.id, isAdmin(me), event)]);
+  const [stats, list, reports, communities] = await Promise.all([eventStats(event.id), members(event.id), eventReports(event.id), eventCommunityOptions(me.id, admin, event)]);
   const invite = `/e/${slug}?code=${event.join_code}`;
 
   return (
@@ -78,7 +80,12 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
             <EventForm event={event} communities={communities} />
           </section>
 
-          <LeaveEvent slug={slug} />
+          {role && <LeaveEvent slug={slug} />}
+
+          <section className="card stack danger-zone">
+            <h2 className="h2">Delete event</h2>
+            <DeleteEvent slug={slug} name={event.name} />
+          </section>
         </div>
       </div>
     </div>

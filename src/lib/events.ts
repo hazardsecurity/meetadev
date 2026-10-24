@@ -74,6 +74,18 @@ export function splitByDate<T extends { starts_on: string | null }>(events: T[])
   return { upcoming, past };
 }
 
+/** Every event, newest first, for the admin page. */
+export async function allEvents() {
+  return query<Event & { members: number; organiser: string | null }>(
+    `SELECT ${EVENT_COLS},
+            (SELECT count(*)::int FROM event_members m WHERE m.event_id = e.id) AS members,
+            (SELECT u.email FROM users u WHERE u.id = e.created_by) AS organiser
+       FROM events e
+      ORDER BY e.created_at DESC
+      LIMIT 300`,
+  );
+}
+
 export async function memberCount(eventId: string) {
   const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1", [eventId]);
   return rows[0].n;

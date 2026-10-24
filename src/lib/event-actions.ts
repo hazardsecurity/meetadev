@@ -22,7 +22,8 @@ async function signedIn() {
 async function organised(slug: string) {
   const me = await signedIn();
   const event = await eventBySlug(slug);
-  if (!event || (await membership(event.id, me.id)) !== "organizer") throw new Error("Not an organiser of this event");
+  // Admins can run any event's organiser tools.
+  if (!event || (!isAdmin(me) && (await membership(event.id, me.id)) !== "organizer")) throw new Error("Not an organiser of this event");
   return { me, event };
 }
 
@@ -203,4 +204,16 @@ export async function dismissReport(slug: string, reportId: string): Promise<For
   await query("DELETE FROM reports WHERE id = $1 AND event_id = $2", [reportId, event.id]);
   revalidatePath(`/e/${slug}/manage`);
   return { ok: "Dismissed." };
+}
+
+/** Delete an event for good. They retype its name so it can't happen by accident.
+ *  Members, bans and reports go with it; connections people made stay. */
+export async function deleteEvent(slug: string, typedName: string): Promise<FormState> {
+  const { me, event } = await organised(slug);
+  if (typedName.trim().toLowerCase() !== event.name.trim().toLowerCase())
+    return { error: `Type the event's name exactly (${event.name}) to delete it.` };
+  await query("DELETE FROM events WHERE id = $1", [event.id]);
+  console.log(`event deleted: ${event.slug} by ${me.id}`);
+  revalidatePath("/", "layout");
+  redirect(isAdmin(me) ? "/admin?deleted=1" : "/events?deleted=1");
 }

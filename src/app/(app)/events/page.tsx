@@ -10,7 +10,9 @@ import { formatDate } from "@/lib/format";
 export const metadata: Metadata = { title: "Your events" };
 
 export default async function EventsPage({ searchParams }: PageProps<"/events">) {
-  const left = !!(await searchParams).left;
+  const sp = await searchParams;
+  const left = !!sp.left;
+  const deleted = !!sp.deleted;
   const me = await requireMember("/events");
   const [events, organiser] = await Promise.all([myEvents(me.id), canCreateEvents(me)]);
   const { upcoming, past } = splitByDate(events);
@@ -18,6 +20,7 @@ export default async function EventsPage({ searchParams }: PageProps<"/events">)
   return (
     <div className="stack narrow" style={{ "--gap": "24px" } as React.CSSProperties}>
       {left && <p className="card card--green">You&apos;ve left that event.</p>}
+      {deleted && <p className="card card--green">Event deleted.</p>}
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1 className="h1">Your events</h1>
         <div className="row">

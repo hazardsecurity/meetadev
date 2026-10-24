@@ -608,3 +608,9 @@ h1, h2, h3, p { margin: 0; }
 .event-card--past { opacity: 0.75; }
 .leave-zone { border-top: 2px dashed var(--line); padding-top: 18px; display: grid; gap: 6px; justify-items: start; }
 @media (max-width: 759px) { .switcher__menu { position: fixed; top: 70px; left: 16px; right: 16px; width: auto; max-height: calc(100dvh - 70px - 96px - env(safe-area-inset-bottom)); } }
+
+/* ---------- delete / admin events ---------- */
+.danger-zone { border-color: #f6c7c2; }
+.admin-events { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.admin-events li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 2px solid var(--line-soft); }
+.admin-events li:last-child { border-bottom: 0; }

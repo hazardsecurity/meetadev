@@ -9,6 +9,7 @@ import { PersonCard } from "@/components/PersonCard";
 import { currentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { eventBySlug, isBanned, memberCount, membership, type Event } from "@/lib/events";
+import { isAdmin } from "@/lib/organizers";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import { directory, profileOf, suggestions } from "@/lib/people";
 import { jsonLd, noindex, SITE_URL } from "@/lib/site";
@@ -97,11 +98,12 @@ export default async function EventPage({ params, searchParams }: PageProps<"/e/
         {ld && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />}
         <EventHeader event={event} members={count} community={community} />
         {action}
+        {isAdmin(me) && <Link className="btn btn--white btn--sm" href={`/e/${slug}/manage`} style={{ justifySelf: "start" }}>Organiser tools (admin)</Link>}
       </div>
     );
   }
 
-  return <Directory event={event} community={community} viewerId={me.id} viewerName={me.name ?? ""} organiser={role === "organizer"} sp={sp} />;
+  return <Directory event={event} community={community} viewerId={me.id} viewerName={me.name ?? ""} organiser={role === "organizer" || isAdmin(me)} sp={sp} />;
 }
 
 async function Directory({ event, community, viewerId, viewerName, organiser, sp }: {
