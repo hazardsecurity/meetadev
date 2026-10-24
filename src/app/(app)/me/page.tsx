@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
+import { PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { logout } from "@/lib/actions";
 import { requireMember } from "@/lib/auth";
@@ -62,8 +63,10 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           <Link href="/onboarding" className="btn btn--white btn--block">Edit profile</Link>
         </div>
 
+        <div className="card"><PushToggle /></div>
+
         <div className="stats">
-          <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Contacts</span></Link>
+          <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>
           <Link href="/requests" className="card stat"><strong>{c.incoming}</strong><span>New requests</span></Link>
         </div>
 

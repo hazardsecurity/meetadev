@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { currentUser, endSession, safeNext } from "./auth";
 import { tidyCities } from "./cities";
 import { query } from "./db";
+import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError, noteSchema, profileSchema, type ProfileInput } from "./validation";
 
@@ -91,6 +92,7 @@ export async function sendRequest(toUserId: string, note: string): Promise<FormS
     [toUserId, me.id],
   );
   if (reverse[0]) {
+    await notify(toUserId, { title: "You're connected! 🤝", body: `${me.name} accepted. Say hi!`, url: `/chat/${me.handle}`, tag: `connected-${me.id}` });
     revalidatePath("/", "layout");
     return { ok: "connected" };
   }
@@ -98,22 +100,32 @@ export async function sendRequest(toUserId: string, note: string): Promise<FormS
   if (!(await allow(`connect:${me.id}`, 40, 86_400)))
     return { error: "You've sent 40 requests today. Give people time to reply, then try again tomorrow." };
 
-  await query(
+  const created = await query(
     `INSERT INTO connection_requests (from_user, to_user, note, event_id) VALUES ($1, $2, $3, $4)
-     ON CONFLICT (from_user, to_user) DO NOTHING`,
+     ON CONFLICT (from_user, to_user) DO NOTHING RETURNING id`,
     [me.id, toUserId, cleanNote.data, shared[0].event_id],
   );
+  if (created.length)
+    await notify(toUserId, {
+      title: `${me.name} wants to connect`,
+      body: cleanNote.data || "Open meetadev to accept or decline.",
+      url: "/requests",
+      tag: `request-${me.id}`,
+    });
   revalidatePath("/", "layout");
   return { ok: "sent" };
 }
 
 export async function respondToRequest(requestId: string, accept: boolean): Promise<FormState> {
   const me = await member();
-  const rows = await query(
+  const rows = await query<{ from_user: string }>(
     `UPDATE connection_requests SET status = $3, responded_at = now()
-      WHERE id = $1 AND to_user = $2 AND status = 'pending' RETURNING id`,
+      WHERE id = $1 AND to_user = $2 AND status = 'pending' RETURNING from_user`,
     [requestId, me.id, accept ? "accepted" : "declined"],
   );
+  // Only acceptances are announced; a decline stays silent.
+  if (accept && rows[0])
+    await notify(rows[0].from_user, { title: "You're connected! 🤝", body: `${me.name} accepted your request. Say hi!`, url: `/chat/${me.handle}`, tag: `connected-${me.id}` });
   revalidatePath("/", "layout");
   return rows.length ? { ok: accept ? "accepted" : "declined" } : { error: "That request is no longer there." };
 }

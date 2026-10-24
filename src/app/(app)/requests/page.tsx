@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { ConnectButton } from "@/components/ConnectButton";
+import { PushToggle } from "@/components/PushToggle";
 import { requireMember } from "@/lib/auth";
 import { incomingRequests, outgoingRequests, type RequestRow } from "@/lib/people";
 
@@ -17,6 +18,7 @@ export default async function RequestsPage() {
     <div className="stack narrow" style={{ "--gap": "28px" } as React.CSSProperties}>
       <section className="stack">
         <h1 className="h1">Requests</h1>
+        <div className="card"><PushToggle compact /></div>
         {incoming.length ? (
           incoming.map((r) => <RequestCard key={r.request_id} r={r} incoming />)
         ) : (

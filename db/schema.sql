@@ -148,3 +148,26 @@ CREATE INDEX IF NOT EXISTS events_city_idx ON events (lower(city));
 -- Organisers who already created events keep the right to create more.
 UPDATE users SET can_create_events = true
  WHERE NOT can_create_events AND id IN (SELECT created_by FROM events WHERE created_by IS NOT NULL);
+
+-- ---------------------------------------------------------------------------
+-- Chat between connected people, and Web Push subscriptions.
+
+CREATE TABLE IF NOT EXISTS messages (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_user  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body       text NOT NULL CHECK (length(body) BETWEEN 1 AND 2000),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  read_at    timestamptz
+);
+CREATE INDEX IF NOT EXISTS messages_pair_idx ON messages (LEAST(from_user, to_user), GREATEST(from_user, to_user), created_at DESC);
+CREATE INDEX IF NOT EXISTS messages_unread_idx ON messages (to_user) WHERE read_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint   text PRIMARY KEY,
+  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  p256dh     text NOT NULL,
+  auth       text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);

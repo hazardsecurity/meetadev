@@ -36,6 +36,6 @@ export const config = {
   matcher: [
     "/",
     "/people/:path*", "/p/:path*", "/requests/:path*", "/connections/:path*", "/me/:path*",
-    "/onboarding/:path*", "/welcome/:path*", "/events/:path*", "/e/:path*", "/admin/:path*", "/leaderboard", "/discover",
+    "/onboarding/:path*", "/welcome/:path*", "/events/:path*", "/e/:path*", "/admin/:path*", "/leaderboard", "/discover", "/chat/:path*",
   ],
 };

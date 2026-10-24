@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
 import { currentUser } from "@/lib/auth";
 import { eventBySlug, membership } from "@/lib/events";
+import { unreadCount } from "@/lib/chat";
 import { counts } from "@/lib/people";
 
 // Signed-in screens stay out of search; public event pages opt back in.
@@ -14,7 +15,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const me = await currentUser();
   const member = me?.onboarded ? me : null;
-  const incoming = member ? (await counts(member.id)).incoming : 0;
+  const [incoming, unread] = member ? await Promise.all([counts(member.id).then((c) => c.incoming), unreadCount(member.id)]) : [0, 0];
 
   // The event "People" opens: the last one visited, if they're still in it.
   const lastSlug = (await cookies()).get("dfi_event")?.value ?? "";
@@ -33,7 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             )}
           </div>
           {member ? (
-            <Nav incoming={incoming} peopleHref={peopleHref} />
+            <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} />
           ) : me ? (
             <Link className="btn btn--white btn--sm" href="/onboarding">Finish my badge</Link>
           ) : (
@@ -42,7 +43,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
       <main className="wrap app-main">{children}</main>
-      {member && <Nav incoming={incoming} peopleHref={peopleHref} className="nav tabbar" />}
+      {member && <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
     </>
   );
 }

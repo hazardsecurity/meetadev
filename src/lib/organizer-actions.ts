@@ -7,6 +7,7 @@ import { currentUser } from "./auth";
 import { tidyCities, tidyCity } from "./cities";
 import { query } from "./db";
 import { isAdmin } from "./organizers";
+import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
 
@@ -55,7 +56,10 @@ export async function reviewRequest(requestId: string, approve: boolean): Promis
     [requestId, approve ? "approved" : "rejected", me.id],
   );
   if (!rows[0]) return { error: "That application was already reviewed." };
-  if (approve) await query("UPDATE users SET can_create_events = true WHERE id = $1", [rows[0].user_id]);
+  if (approve) {
+    await query("UPDATE users SET can_create_events = true WHERE id = $1", [rows[0].user_id]);
+    await notify(rows[0].user_id, { title: "You're approved! 🎤", body: "You can now create events on meetadev.", url: "/events/new", tag: "organiser-approved" });
+  }
   revalidatePath("/admin");
   return { ok: approve ? "Approved. They can create events now." : "Declined." };
 }

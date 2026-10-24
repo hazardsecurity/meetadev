@@ -1,6 +1,6 @@
 "use client";
 
-import { Handshake, IdCard, Inbox, Trophy, Users, type LucideIcon } from "lucide-react";
+import { IdCard, Inbox, MessageCircle, Trophy, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,17 +9,18 @@ type Tab = { key: string; label: string; Icon: LucideIcon; tone: "blue" | "red" 
 const TABS: Tab[] = [
   { key: "people", label: "People", Icon: Users, tone: "blue" },
   { key: "requests", label: "Requests", Icon: Inbox, tone: "red" },
-  { key: "contacts", label: "Contacts", Icon: Handshake, tone: "green" },
+  { key: "contacts", label: "Chats", Icon: MessageCircle, tone: "green" },
   { key: "leaderboard", label: "Leaderboard", Icon: Trophy, tone: "yellow" },
   { key: "me", label: "My badge", Icon: IdCard, tone: "blue" },
 ];
 
-export function Nav({ incoming, peopleHref, className = "nav" }: { incoming: number; peopleHref: string; className?: string }) {
+export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { incoming: number; unread?: number; peopleHref: string; className?: string }) {
   const path = usePathname();
   const href = (key: string) =>
     ({ people: peopleHref, requests: "/requests", contacts: "/connections", leaderboard: "/leaderboard", me: "/me" })[key]!;
   const active = (key: string) => {
     if (key === "leaderboard") return path === "/leaderboard" || path.endsWith("/leaderboard");
+    if (key === "contacts") return path.startsWith("/connections") || path.startsWith("/chat/");
     if (key === "people") return (path.startsWith("/e/") || path.startsWith("/events") || path.startsWith("/p/") || path === "/discover") && !path.endsWith("/leaderboard");
     return path.startsWith(href(key));
   };
@@ -31,9 +32,11 @@ export function Nav({ incoming, peopleHref, className = "nav" }: { incoming: num
           <span className="tab__icon" aria-hidden>
             <Icon size={20} strokeWidth={2.4} />
             {key === "requests" && incoming > 0 && <span className="badge-count tab__badge">{incoming > 9 ? "9+" : incoming}</span>}
+            {key === "contacts" && unread > 0 && <span className="badge-count tab__badge">{unread > 9 ? "9+" : unread}</span>}
           </span>
           <span className="tab__label">{label}</span>
           {key === "requests" && incoming > 0 && <span className="sr-only">, {incoming} new</span>}
+          {key === "contacts" && unread > 0 && <span className="sr-only">, {unread} unread</span>}
         </Link>
       ))}
     </nav>
