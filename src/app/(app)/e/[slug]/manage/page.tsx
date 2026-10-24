@@ -6,8 +6,9 @@ import { EventForm } from "@/components/EventForms";
 import { InviteQR } from "@/components/InviteQR";
 import { CodeTools, LeaveEvent, MemberList, Reports } from "@/components/OrganiserTools";
 import { requireMember } from "@/lib/auth";
-import { myCommunities } from "@/lib/communities";
+import { eventCommunityOptions } from "@/lib/communities";
 import { eventBySlug, eventReports, eventStats, members, membership } from "@/lib/events";
+import { isAdmin } from "@/lib/organizers";
 
 export const metadata: Metadata = { title: "Organiser tools", robots: { index: false } };
 
@@ -19,7 +20,7 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
   if (!event) notFound();
   if ((await membership(event.id, me.id)) !== "organizer") redirect(`/e/${slug}`);
 
-  const [stats, list, reports, communities] = await Promise.all([eventStats(event.id), members(event.id), eventReports(event.id), myCommunities(me.id)]);
+  const [stats, list, reports, communities] = await Promise.all([eventStats(event.id), members(event.id), eventReports(event.id), eventCommunityOptions(me.id, isAdmin(me), event)]);
   const invite = `/e/${slug}?code=${event.join_code}`;
 
   return (

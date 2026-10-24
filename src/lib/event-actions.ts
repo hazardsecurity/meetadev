@@ -157,10 +157,13 @@ export async function updateEvent(slug: string, _prev: FormState, form: FormData
   });
   if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
   const e = parsed.data;
-  const community = field(form, "community_id") ? await communityFor(form, me) : null;
+  // No Community field on the form means "leave the link as it is"; an empty
+  // choice means "unlink"; a community they can't link to keeps the current one.
+  const chosen = field(form, "community_id");
+  const community = !form.has("community_id") ? event.community_id : chosen ? ((await communityFor(form, me)) ?? event.community_id) : null;
   await query(
     "UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, require_code = $6, listed = $7, community_id = $8 WHERE id = $1",
-    [event.id, e.name, e.city, e.starts_on, e.about, e.require_code, e.listed, community ?? (field(form, "community_id") ? event.community_id : null)],
+    [event.id, e.name, e.city, e.starts_on, e.about, e.require_code, e.listed, community],
   );
   revalidatePath("/", "layout");
   return { ok: "Saved." };

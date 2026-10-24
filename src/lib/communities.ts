@@ -53,6 +53,21 @@ export async function myCommunities(userId: string) {
   );
 }
 
+/** Communities an event can be linked to: the ones this person organises, the
+ *  event's current one, and (for admins) every community in the event's city. */
+export async function eventCommunityOptions(userId: string, admin: boolean, event: { community_id: string | null; city: string }) {
+  return query<CommunityLite>(
+    `SELECT ${COLS} FROM communities c
+      WHERE c.status = 'active'
+        AND (EXISTS (SELECT 1 FROM community_organizers o WHERE o.community_id = c.id AND o.user_id = $1)
+             OR c.id = $2
+             OR ($3 AND lower(c.city) = lower(trim(split_part($4, ',', 1)))))
+      ORDER BY c.id = $2 DESC, c.kind = 'gdg' DESC, c.name
+      LIMIT 200`,
+    [userId, event.community_id, admin, event.city],
+  );
+}
+
 export async function communityCount() {
   const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM communities WHERE status = 'active'");
   return rows[0].n;

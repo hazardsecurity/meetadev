@@ -203,12 +203,13 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS community_id uuid REFERENCES communi
 -- One-off data fixes, each recorded so it runs once.
 CREATE TABLE IF NOT EXISTS seed_runs (key text PRIMARY KEY, ran_at timestamptz NOT NULL DEFAULT now());
 
--- Events made before communities existed: link each to its city's GDG chapter
+-- Events made before communities existed (run again: saving the event form
+-- once wiped the first run's link): link each to its city's GDG chapter
 -- (only when the city has exactly one), and make the event's organiser one of
 -- that chapter's organisers so they can manage the link.
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM seed_runs WHERE key = 'link-events-to-chapters') THEN
+  IF NOT EXISTS (SELECT 1 FROM seed_runs WHERE key = 'link-events-to-chapters-2') THEN
     UPDATE events e SET community_id = (
         SELECT c.id FROM communities c
          WHERE c.kind = 'gdg' AND c.status = 'active' AND lower(c.city) = lower(trim(split_part(e.city, ',', 1))))
@@ -216,9 +217,9 @@ BEGIN
        AND (SELECT count(*) FROM communities c
              WHERE c.kind = 'gdg' AND c.status = 'active' AND lower(c.city) = lower(trim(split_part(e.city, ',', 1)))) = 1;
     INSERT INTO community_organizers (community_id, user_id)
-      SELECT DISTINCT e.community_id, e.created_by FROM events e JOIN users u ON u.id = e.created_by
-       WHERE e.community_id IS NOT NULL AND u.can_create_events
+      SELECT DISTINCT e.community_id, e.created_by FROM events e
+       WHERE e.community_id IS NOT NULL AND e.created_by IS NOT NULL
       ON CONFLICT DO NOTHING;
-    INSERT INTO seed_runs (key) VALUES ('link-events-to-chapters');
+    INSERT INTO seed_runs (key) VALUES ('link-events-to-chapters-2');
   END IF;
 END $$;
