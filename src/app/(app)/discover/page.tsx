@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AyoSays } from "@/components/Ayo";
 import { CitiesEditor } from "@/components/CitiesEditor";
-import { requireMember } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
 import { tidyCities } from "@/lib/cities";
 import { CommunityCard } from "@/components/CommunityCard";
 import { communitiesInCities } from "@/lib/communities";
@@ -17,12 +17,12 @@ export const metadata: Metadata = {
 
 export default async function DiscoverPage({ searchParams }: PageProps<"/discover">) {
   const sp = await searchParams;
-  // Only for people who've made their badge; others sign in / onboard first.
-  const me = await requireMember("/discover");
-  const profile = await profileOf(me.id);
+  // Open to anyone (D-013); with a badge it starts from your own cities and remembers them.
+  const me = await currentUser();
+  const profile = me?.onboarded ? await profileOf(me.id) : null;
   const asked = typeof sp.city === "string" ? tidyCities(sp.city.split(",")) : [];
   const cities = asked.length ? asked : (profile?.cities ?? []);
-  const [events, suggestions, communities] = await Promise.all([eventsInCities(cities, me.id), knownCities(), communitiesInCities(cities)]);
+  const [events, suggestions, communities] = await Promise.all([eventsInCities(cities, profile?.user_id ?? null), knownCities(), communitiesInCities(cities)]);
 
   return (
     <div className="stack narrow" style={{ "--gap": "24px" } as React.CSSProperties}>
@@ -40,7 +40,7 @@ export default async function DiscoverPage({ searchParams }: PageProps<"/discove
             </div>
             <datalist id="known-cities">{suggestions.map((c) => <option key={c} value={c} />)}</datalist>
             <span className="hint">
-              Separate cities with commas. <Link className="link" href="/discover">Back to your cities</Link>
+              Separate cities with commas.{profile && <> <Link className="link" href="/discover">Back to your cities</Link></>}
             </span>
           </form>
         )}

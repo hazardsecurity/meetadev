@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Celebrate } from "@/components/Celebrate";
 import { requireMember, safeNext } from "@/lib/auth";
-import { eventBySlug } from "@/lib/events";
+import { eventBySlug, isBanned, membership } from "@/lib/events";
+import { joinEvent } from "@/lib/event-actions";
 
 export const metadata: Metadata = { title: "Welcome", robots: { index: false, follow: false } };
 
@@ -16,6 +17,21 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
   // organiser application / create page, not the attendee pages.
   if (next.startsWith("/events/new"))
     return <Celebrate first={first} line="Now let's set you up as an organiser." cta="Continue to organiser setup" next={next} />;
+  // Came from an invite link and not in yet: this one tap joins (the sign-in button said "to join").
+  if (event && next.split("?")[0] === `/e/${event.slug}` && !(await membership(event.id, me.id)) && !(await isBanned(event.id, me.id))) {
+    const slug = event.slug;
+    async function join() {
+      "use server";
+      await joinEvent(slug);
+    }
+    return (
+      <Celebrate first={first} line={`Next stop: ${event.name}. Join and see who's there.`}>
+        <form action={join}>
+          <button className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>Join {event.name}</button>
+        </form>
+      </Celebrate>
+    );
+  }
   if (event)
     return <Celebrate first={first} line={`Next stop: ${event.name}. Let's see who's there.`} cta={`Go to ${event.name}`} next={next} />;
   if (next !== "/events")

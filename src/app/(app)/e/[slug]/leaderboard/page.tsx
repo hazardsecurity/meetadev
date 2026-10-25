@@ -15,7 +15,7 @@ export default async function LeaderboardPage({ params }: PageProps<"/e/[slug]/l
   if (!event) notFound();
   if (!(await membership(event.id, me.id))) redirect(`/e/${slug}`);
 
-  const [rows, mine] = await Promise.all([leaderboard(event.id), myStanding(event.id, me.id)]);
+  const [rows, mine] = await Promise.all([leaderboard(event.id, me.id), myStanding(event.id, me.id)]);
   const first = me.name.split(" ")[0];
   const leader = rows[0];
 

@@ -83,6 +83,8 @@ export async function importCommunities(rows: ImportRow[], by: string | null) {
   let added = 0, updated = 0;
   try {
     await client.query("BEGIN");
+    // One import at a time, so two admins adding the same community can't both pick its slug (BUG-021).
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('communities.slug'))");
     for (const r of rows) {
       const city = tidyCity(r.city);
       const slug = slugifyCommunity(r.name, city);

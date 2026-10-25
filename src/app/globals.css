@@ -604,7 +604,7 @@ h1, h2, h3, p { margin: 0; }
 .past-events > summary::before { content: "▸ "; color: var(--muted); }
 .past-events[open] > summary::before { content: "▾ "; }
 .event-card--past { opacity: 0.75; }
-.leave-zone { border-top: 2px dashed var(--line); padding-top: 18px; display: grid; gap: 6px; justify-items: start; }
+.leave-zone { border-top: 2px dashed var(--line); padding-top: 18px; display: grid; gap: 6px; justify-items: center; text-align: center; }
 @media (max-width: 759px) { .switcher__menu { position: fixed; top: 70px; left: 16px; right: 16px; width: auto; max-height: calc(100dvh - 70px - 96px - env(safe-area-inset-bottom)); } }
 
 /* ---------- delete / admin events ---------- */
@@ -635,7 +635,7 @@ h1, h2, h3, p { margin: 0; }
 .msg__meta > :not(.ticks) { opacity: 0.75; }
 
 /* ---------- the core loop: deck, we met, funnel ---------- */
-.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; justify-self: start; min-width: min(100%, 280px); background: var(--wash); border: 2px solid var(--line-soft); border-radius: 14px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; width: 100%; max-width: 420px; background: var(--wash); border: 2px solid var(--line-soft); border-radius: 14px; }
 .seg a { min-height: 40px; display: grid; place-items: center; padding: 0 18px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; color: var(--muted); }
 .seg a.on { background: #fff; color: var(--ink); box-shadow: 0 2px 0 var(--line); }
 .strip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 16px; background: var(--blue-soft); border: 2px solid #c6dafc; border-bottom-width: 4px; max-width: 420px; width: 100%; margin-inline: auto; }
@@ -644,6 +644,7 @@ h1, h2, h3, p { margin: 0; }
 .strip__go { margin-left: auto; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; color: #1a5dc8; }
 .live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; }
 
+.deck-page { width: 100%; max-width: 420px; margin-inline: auto; }
 .deck-wrap { display: grid; gap: 12px; max-width: 420px; width: 100%; margin-inline: auto; }
 .deck { display: grid; }
 .dcard {
@@ -659,7 +660,9 @@ h1, h2, h3, p { margin: 0; }
 .dcard__name { font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; overflow-wrap: anywhere; }
 .dcard__more { font-size: 0.9rem; justify-self: start; }
 .deck__note { font-size: 0.92rem; font-weight: 600; background: var(--ink); color: #fff; border-radius: 14px; padding: 10px 14px; }
-.deck__actions { display: grid; grid-template-columns: auto 1fr 1fr; gap: 12px; align-items: center; }
+/* Pinned to the bottom while the card scrolls, so Pass and Meet never leave the screen (above the tab bar on phones). */
+.deck__actions { position: sticky; bottom: 0; z-index: 2; background: #fff; padding-block: 10px; display: grid; grid-template-columns: auto 1fr 1fr; gap: 12px; align-items: center; }
+@media (max-width: 759px) { .deck__actions { bottom: calc(76px + env(safe-area-inset-bottom)); } } /* the tab bar's height */
 .deck__actions .btn { min-height: 56px; }
 .round { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: #fff; border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); color: var(--muted); cursor: pointer; }
 .round:disabled { opacity: 0.45; cursor: not-allowed; }

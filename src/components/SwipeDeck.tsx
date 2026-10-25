@@ -4,7 +4,7 @@ import { Undo2, UserPlus, X } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { pass, undoSwipe, wantToMeet } from "@/lib/actions";
 import type { DeckCard } from "@/lib/people";
 import { AyoSays } from "./Ayo";
@@ -16,6 +16,8 @@ import { SafetyMenu } from "./SafetyMenu";
 type Choice = "meet" | "pass";
 type Result = { error?: string; ok?: string };
 const firstName = (name: string) => name.split(" ")[0];
+// A card must be on screen this long before a choice counts (the second tap of a double tap lands on the next card).
+const SETTLE_MS = 350;
 
 /** People who are here, one at a time. Meet stays private until it's mutual; Pass hides them at this event. */
 export function SwipeDeck({ slug, cards, me, waiting }: {
@@ -33,9 +35,13 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
   const [batch, setBatch] = useState(cards);
   if (batch !== cards) { setBatch(cards); setI(0); setDone([]); }
 
+  // When a choice, Undo or "Keep going" last brought up a new card. The first card on load isn't guarded.
+  const shownAt = useRef(0);
+
   const choose = (choice: Choice) => {
-    if (!card || match) return;
+    if (!card || match || performance.now() - shownAt.current < SETTLE_MS) return;
     const c = card;
+    shownAt.current = performance.now();
     setI((n) => n + 1);
     setDone((d) => [...d, c]);
     setNote(choice === "meet" ? `Saved. ${firstName(c.name)} only finds out if they want to meet you too.` : "");
@@ -58,6 +64,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
   const undo = () => {
     const c = done.at(-1);
     if (!c) return;
+    shownAt.current = performance.now();
     setDone((d) => d.slice(0, -1));
     setI(cards.indexOf(c));
     setNote("");
@@ -70,7 +77,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
   // Arrow keys on a keyboard; re-bound each render so they use the current card.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (e.repeat || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable='true']"))) return;
       if (e.key === "ArrowLeft") choose("pass");
       else if (e.key === "ArrowRight") choose("meet");
     };
@@ -89,7 +96,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
               <Avatar name={match.name} color={match.color} photo={match.photo_url} size={120} />
             </span>
           }>
-          <button className="btn btn--white" style={{ minWidth: 220 }} onClick={() => setMatch(null)}>Keep going</button>
+          <button className="btn btn--white" style={{ minWidth: 220 }} onClick={() => { shownAt.current = performance.now(); setMatch(null); }}>Keep going</button>
         </Celebrate>
       </div>
     );

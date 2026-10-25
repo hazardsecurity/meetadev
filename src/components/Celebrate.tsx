@@ -17,7 +17,7 @@ const PIECES = Array.from({ length: 28 }, (_, n) => ({
 
 /** Full-screen moment with confetti. Defaults to "your badge is ready"; `title`, `art` and `children` (extra actions) reuse it. */
 export function Celebrate({ first, line, cta, next, title, art, children }: {
-  first: string; line: string; cta: string; next: string; title?: string; art?: React.ReactNode; children?: React.ReactNode;
+  first: string; line: string; cta?: string; next?: string; title?: string; art?: React.ReactNode; children?: React.ReactNode;
 }) {
   const still = useReducedMotion();
   return (
@@ -45,7 +45,7 @@ export function Celebrate({ first, line, cta, next, title, art, children }: {
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
         <h1 className="h1" style={{ color: "var(--green-shade)" }}>{title ?? `Your badge is ready, ${first}!`}</h1>
         <p className="lead">{line}</p>
-        <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>{cta}</Link>
+        {next && <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>{cta}</Link>}
         {children}
       </motion.div>
     </div>

@@ -37,6 +37,7 @@ export const config = {
   matcher: [
     "/",
     "/people/:path*", "/p/:path*", "/requests/:path*", "/connections/:path*", "/me/:path*",
-    "/onboarding/:path*", "/welcome/:path*", "/events/:path*", "/e/:path*", "/admin/:path*", "/leaderboard", "/discover", "/chat/:path*",
+    // Not /discover: anyone can search Find events (D-013).
+    "/onboarding/:path*", "/welcome/:path*", "/events/:path*", "/e/:path*", "/admin/:path*", "/leaderboard", "/chat/:path*",
   ],
 };

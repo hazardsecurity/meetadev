@@ -13,10 +13,10 @@ Everything is built from five primitives. A new feature should be one of these, 
 | Primitive | Stored as | Rule |
 |---|---|---|
 | **Person** | `profiles` | One badge, reused at every event. |
-| **Here** | `event_members.checked_in_at` | Set by scanning the event's check-in code (`/e/<slug>/checkin?k=…`), shown only at the venue. Joining isn't being here. |
+| **Here** | `event_members.checked_in_at` | Set by scanning the event's check-in code (`/e/<slug>/checkin?k=…`), shown only at the venue. Joining isn't being here. Lasts for that day (Lagos time), and only on the event's date when it has one. |
 | **Want to meet** | a `pending` row in `connection_requests` | One-way and private: never shown or sent to the person it's about. |
 | **Connection** | the same row, `accepted` | Both want to meet. The only moment anyone is told. Unlocks chat and contact details. |
-| **Met** | a `meetings` row from each person for the same event | Each taps We met; it counts once both have, at an event both are here at. |
+| **Met** | a `meetings` row from each person for the same event | Each taps We met; it counts once both have, at an event both are here at that day. |
 
 The deck's Pass (`passes`) only hides someone from your deck at that event. "Your people here" is Here plus Connection: nothing extra is stored.
 
@@ -59,6 +59,7 @@ The one number: of the matches made at an event, how many became meetings.
 - **Meet** (deck or directory) is private until it's mutual: no requests, no notes, no declines. A match notifies the other person and opens chat.
 - **We met**: in the chat, or on a profile after scanning someone's badge. It counts once both tap it, and the leaderboard ranks people met in person.
 - **Your people here**: when you check in, connections who are already here get a ping, and the deck shows who's here. Never between events.
+- **Delete my account**: on My badge, after typing DELETE. Removes the badge, contacts, connections, chats and notifications; meetings already confirmed still count for the other person, without the deleted name. Bans, blocks and reports stay, tied only to a SHA-256 hash of the Google ID, and apply again if that Google account signs in later.
 - **Private contact details**: WhatsApp, phone and email are only sent to the browser once you're connected.
 - **My badge**: a QR code that opens your profile, for meeting in person; profile strength meter.
 - **Contacts**: one-tap WhatsApp, a 10-person goal, and "Save all to phone" (.vcf export).

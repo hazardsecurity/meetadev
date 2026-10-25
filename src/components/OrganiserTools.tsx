@@ -124,7 +124,7 @@ export function Reports({ slug, list }: { slug: string; list: ReportRow[] }) {
       {list.map((r) => (
         <div key={r.id} className="report">
           <p>
-            <strong>{r.reporter_name}</strong> reported <Link className="link" href={`/p/${r.reported_handle}`}>{r.reported_name}</Link>
+            <strong>{r.reporter_name}</strong> reported {r.reported_handle ? <Link className="link" href={`/p/${r.reported_handle}`}>{r.reported_name}</Link> : r.reported_name}
             <span className="hint"> · {new Date(r.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</span>
           </p>
           <p className="report__reason">{r.reason}</p>

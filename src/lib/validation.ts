@@ -24,7 +24,8 @@ export const profileSchema = z.object({
   level: z.enum(levelIds, { message: "Pick where you are on your journey." }),
   intents: z.array(z.enum(intentIds)).min(1, "Pick at least one thing you're here for.").max(8),
   stack: z.array(z.enum(STACK)).max(10, "Pick up to 10."),
-  cities: z.array(z.string().trim().max(60)).min(1, "Add at least one city, so we can show you events near you.").max(10, "Up to 10 cities."),
+  cities: z.array(z.string().trim().min(2, "Add at least one city, so we can show you events near you.").max(60))
+    .min(1, "Add at least one city, so we can show you events near you.").max(10, "Up to 10 cities."),
   whatsapp: phone,
   phone: phone,
   contact_email: z.string().trim().max(120).refine((v) => v === "" || z.string().email().safeParse(v).success, "That email doesn't look right."),

@@ -4,6 +4,7 @@ import { Ayo } from "@/components/Ayo";
 import { InviteQR } from "@/components/InviteQR";
 import { requireMember } from "@/lib/auth";
 import { checkinKey, eventBySlug, membership } from "@/lib/events";
+import { isAdmin } from "@/lib/organizers";
 
 export const metadata: Metadata = { title: "Join screen", robots: { index: false } };
 
@@ -14,7 +15,8 @@ export default async function ScreenPage({ params, searchParams }: PageProps<"/e
   const me = await requireMember(`/e/${slug}/screen`);
   const event = await eventBySlug(slug);
   if (!event) notFound();
-  if ((await membership(event.id, me.id)) !== "organizer") redirect(`/e/${slug}`);
+  // Same rule as Manage, which links here: the event's organisers and platform admins.
+  if ((await membership(event.id, me.id)) !== "organizer" && !isAdmin(me)) redirect(`/e/${slug}`);
 
   if ((await searchParams).show === "checkin")
     return (

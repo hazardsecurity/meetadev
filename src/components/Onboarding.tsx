@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { saveProfile } from "@/lib/actions";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import type { ProfileInput } from "@/lib/validation";
 import { AyoSays, type Mood } from "./Ayo";
 import { CityInput } from "./CityInput";
+import { useHydrated } from "./LocalTime";
 
 type Step = { key: string; say: (p: ProfileInput) => string; mood?: Mood; valid: (p: ProfileInput) => boolean };
+
+// Answers so far, kept in this tab so a refresh on venue Wi-Fi doesn't lose them (cleared on Finish).
+const DRAFT = "meetadev:badge-draft";
+// A step must be on screen this long before Continue/Back counts, so a double tap can't skip a step unseen.
+const SETTLE_MS = 350;
 
 const STEPS: Step[] = [
   { key: "role", say: (p) => `Hey ${p.name.split(" ")[0]}! What do you do?`, mood: "wave", valid: (p) => !!p.role },
@@ -32,6 +38,18 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const still = useReducedMotion();
+  const shownAt = useRef(0);
+
+  // Bring back a draft from this tab once, after hydration (the server can't see sessionStorage).
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(editing);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const draft = readDraft();
+    if (draft?.owner === initial.contact_email) { setP({ ...initial, ...draft.p }); setI(draft.i); }
+  }
+  const saveDraft = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ owner: initial.contact_email, p, i })); } catch {} };
+  useEffect(() => { if (restored && !editing && !pending) saveDraft(); });
   const step = STEPS[i];
   // Coming from "I'm a GDG organiser": explain why organisers make a badge too.
   const organiser = !editing && next.startsWith("/events/new");
@@ -50,9 +68,14 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
       return { ...s, [k]: list.includes(v) ? list.filter((x) => x !== v) : list.length >= max ? list : [...list, v] };
     });
 
-  const go = (d: number) => { setDir(d); setError(""); setI((n) => Math.min(STEPS.length - 1, Math.max(0, n + d))); };
+  const ready = () => performance.now() - shownAt.current >= SETTLE_MS;
+  const go = (d: number) => {
+    shownAt.current = performance.now();
+    setDir(d); setError(""); setI((n) => Math.min(STEPS.length - 1, Math.max(0, n + d)));
+  };
   const submit = () =>
     start(async () => {
+      try { sessionStorage.removeItem(DRAFT); } catch {}
       const res = await saveProfile(p, next);
       if (res?.error) setError(res.error);
     });
@@ -170,12 +193,12 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
 
       <footer className="onb__foot">
         <div className="wrap row" style={{ justifyContent: "space-between" }}>
-          {i > 0 ? <button type="button" className="btn btn--white" onClick={() => go(-1)}>Back</button> : <span />}
+          {i > 0 ? <button type="button" className="btn btn--white" onClick={() => ready() && go(-1)}>Back</button> : <span />}
           <button
             type="button"
             className={`btn ${step.valid(p) ? "btn--green" : ""}`}
             disabled={!step.valid(p) || pending}
-            onClick={() => (last ? submit() : go(1))}
+            onClick={() => { if (!ready()) return; if (last) submit(); else go(1); }}
           >
             {last ? (pending ? "Saving…" : editing ? "Save" : "Finish") : "Continue"}
           </button>
@@ -183,6 +206,10 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
       </footer>
     </div>
   );
+}
+
+function readDraft(): { owner: string; p: Partial<ProfileInput>; i: number } | null {
+  try { return JSON.parse(sessionStorage.getItem(DRAFT) ?? "null"); } catch { return null; }
 }
 
 function Bars({ n }: { n: number }) {

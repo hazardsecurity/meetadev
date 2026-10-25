@@ -126,17 +126,23 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
   );
 
   return (
-    <div className="stack" style={{ "--gap": "24px" } as React.CSSProperties}>
+    // The deck view is one column, the width of a card: switch, status, deck and Leave all line up.
+    <div className={deckView ? "stack deck-page" : "stack"} style={{ "--gap": "24px" } as React.CSSProperties}>
       {deckView ? (
         // The deck gets the screen: the event's name is already in the top bar.
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          {views}
-          <div className="row">
-            {here && <span className="chip chip--green"><span className="live" aria-hidden />You&apos;re here</span>}
-            {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+        <>
+          <div className="stack" style={{ "--gap": "12px" } as React.CSSProperties}>
+            {views}
+            {(here || organiser) && (
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                {here && <span className="chip chip--green"><span className="live" aria-hidden />You&apos;re here</span>}
+                {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
+              </div>
+            )}
           </div>
-          {sp.blocked && <p className="card card--green" style={{ flexBasis: "100%" }}>Blocked. You won&apos;t see each other any more.</p>}
-        </div>
+          {sp.joined && <p className="card card--green success">You&apos;re in! Check in at the venue and the deck fills with people who are there.</p>}
+          {sp.blocked && <p className="card card--green">Blocked. You won&apos;t see each other any more.</p>}
+        </>
       ) : (
         <>
           <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-end" }}>

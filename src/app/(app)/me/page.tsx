@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
+import { DeleteAccount } from "@/components/DeleteAccount";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { requireMember } from "@/lib/auth";
@@ -74,6 +75,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           <LogoutButton />
         </div>
         {!p.listed && <p className="hint">You&apos;re hidden from the directory. People can still reach you through your QR code.</p>}
+        <DeleteAccount />
       </section>
     </div>
   );

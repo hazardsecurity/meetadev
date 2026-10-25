@@ -116,6 +116,8 @@ CREATE TABLE IF NOT EXISTS event_bans (
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (event_id, user_id)
 );
+-- A banned person is never a member. A ban racing a check-in could leave both (BUG-022, fixed in the app).
+DELETE FROM event_members m USING event_bans b WHERE b.event_id = m.event_id AND b.user_id = m.user_id;
 
 ALTER TABLE connection_requests ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE SET NULL;
 ALTER TABLE reports ADD COLUMN IF NOT EXISTS event_id uuid REFERENCES events(id) ON DELETE CASCADE;
@@ -126,6 +128,10 @@ CREATE INDEX IF NOT EXISTS reports_event_idx ON reports (event_id);
 -- admin (ADMIN_EMAILS) approves.
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_create_events boolean NOT NULL DEFAULT false;
+-- On a deleted account's stand-in: a one-way hash of the Google ID, so bans, blocks and reports come back if the
+-- same Google account signs in again (BUG-019). Nothing else about the person is kept.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS erased_key text;
+CREATE INDEX IF NOT EXISTS users_erased_key_idx ON users (erased_key) WHERE erased_key IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS organizer_requests (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -145,9 +151,6 @@ CREATE INDEX IF NOT EXISTS organizer_requests_status_idx ON organizer_requests (
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS cities text[] NOT NULL DEFAULT '{}';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS listed boolean NOT NULL DEFAULT true;
 CREATE INDEX IF NOT EXISTS events_city_idx ON events (lower(city));
--- Organisers who already created events keep the right to create more.
-UPDATE users SET can_create_events = true
- WHERE NOT can_create_events AND id IN (SELECT created_by FROM events WHERE created_by IS NOT NULL);
 
 -- ---------------------------------------------------------------------------
 -- Chat between connected people, and Web Push subscriptions.

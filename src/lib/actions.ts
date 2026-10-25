@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { erasedKey, KEPT_AFTER_DELETE } from "./accounts";
 import { currentUser, endSession, safeNext } from "./auth";
 import { tidyCities } from "./cities";
-import { query } from "./db";
-import { eventsTogether } from "./events";
+import { pool, query } from "./db";
+import { CONFIRMED, hereTogether } from "./events";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError, profileSchema, type ProfileInput } from "./validation";
@@ -18,6 +19,54 @@ export type FormState = { error?: string; ok?: string; values?: Record<string, s
 // Accounts
 
 export async function logout() {
+  await endSession();
+  redirect("/");
+}
+
+/**
+ * Delete my account and everything about me (D-006). Meetings I confirmed still count for the other person
+ * (D-015): they move to a stand-in account with no profile, so I'm shown nowhere. So do bans, blocks and reports,
+ * under a hash of my Google ID, so deleting can't be used to get round them (BUG-019). The rest cascades.
+ */
+export async function deleteAccount(typed: string): Promise<FormState> {
+  const me = await currentUser();
+  if (!me) return { error: "You've been signed out. Log in again." };
+  if (typed.trim().toUpperCase() !== "DELETE") return { error: "Type DELETE to confirm." };
+  const solo = await query<{ name: string }>(
+    `SELECT e.name FROM event_members m JOIN events e ON e.id = m.event_id
+      WHERE m.user_id = $1 AND m.role = 'organizer'
+        AND NOT EXISTS (SELECT 1 FROM event_members o WHERE o.event_id = m.event_id AND o.role = 'organizer' AND o.user_id <> $1)
+      LIMIT 1`,
+    [me.id],
+  );
+  if (solo[0]) return { error: `You're the only organiser of ${solo[0].name}. Make someone else an organiser first.` };
+
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query<{ id: string }>(
+      "INSERT INTO users (email) VALUES ('deleted+' || gen_random_uuid() || '@meetadev.invalid') RETURNING id",
+    );
+    const standIn = rows[0].id;
+    await client.query(`UPDATE meetings a SET from_user = $2 WHERE a.from_user = $1 AND ${CONFIRMED}`, [me.id, standIn]);
+    await client.query(
+      `UPDATE meetings a SET to_user = $2 WHERE a.to_user = $1
+         AND EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = $2 AND b.to_user = a.from_user)`,
+      [me.id, standIn],
+    );
+    const { rows: [{ google_sub }] } = await client.query<{ google_sub: string | null }>("SELECT google_sub FROM users WHERE id = $1", [me.id]);
+    await client.query("UPDATE users SET erased_key = $2 WHERE id = $1", [standIn, google_sub ? erasedKey(google_sub) : null]);
+    // Reports I made stay too, without my name; they're about someone else, and never come back to me.
+    for (const [table, column] of [...KEPT_AFTER_DELETE, ["reports", "reporter"]])
+      await client.query(`UPDATE ${table} SET ${column} = $2 WHERE ${column} = $1`, [me.id, standIn]);
+    await client.query("DELETE FROM users WHERE id = $1", [me.id]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
   await endSession();
   redirect("/");
 }
@@ -85,20 +134,42 @@ async function sharedEvent(me: string, other: string, slug?: string) {
 
 /** Record that `me` wants to meet `other`. Returns "connected" when it makes the want mutual. */
 async function recordWant(me: string, other: string, eventId: string) {
-  // Theirs already exists: this makes it a connection, credited to the event where it became mutual.
-  const reverse = await query(
-    `UPDATE connection_requests SET status = 'accepted', responded_at = now(), event_id = $3
-      WHERE from_user = $1 AND to_user = $2 AND status = 'pending' RETURNING id`,
-    [other, me, eventId],
-  );
-  if (reverse.length) return "connected";
-  await query(
-    `INSERT INTO connection_requests (from_user, to_user, event_id) VALUES ($1, $2, $3)
-     ON CONFLICT (from_user, to_user) DO NOTHING`,
-    [me, other, eventId],
-  );
-  const mine = await query<{ status: string }>("SELECT status FROM connection_requests WHERE from_user = $1 AND to_user = $2", [me, other]);
-  return mine[0]?.status === "accepted" ? "already" : "wanted";
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    // One decision per pair at a time: two Meets at the same moment would otherwise each save a one-way want
+    // before seeing the other's, and the pair would never connect.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext(least($1::text, $2::text) || greatest($1::text, $2::text)))", [me, other]);
+    let result: "already" | "connected" | "wanted";
+    // Already connected, whichever of us wanted first: nothing to record.
+    const connected = await client.query(
+      `SELECT 1 FROM connection_requests WHERE status = 'accepted'
+         AND ((from_user = $1 AND to_user = $2) OR (from_user = $2 AND to_user = $1))`,
+      [me, other],
+    );
+    if (connected.rowCount) result = "already";
+    // Theirs already exists: this makes it a connection, credited to the event where it became mutual.
+    else if ((await client.query(
+      `UPDATE connection_requests SET status = 'accepted', responded_at = now(), event_id = $3
+        WHERE from_user = $1 AND to_user = $2 AND status = 'pending' RETURNING id`,
+      [other, me, eventId],
+    )).rowCount) result = "connected";
+    else {
+      await client.query(
+        `INSERT INTO connection_requests (from_user, to_user, event_id) VALUES ($1, $2, $3)
+         ON CONFLICT (from_user, to_user) DO NOTHING`,
+        [me, other, eventId],
+      );
+      result = "wanted";
+    }
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // These actions don't revalidate: the deck, buttons and We met bar update in place, and every page
@@ -152,8 +223,8 @@ export async function weMet(otherId: string): Promise<FormState> {
   const me = await member();
   if (otherId === me.id) return { error: "That's you!" };
   if (await blockedBetween(me.id, otherId)) return { error: "You can't meet this person." };
-  const event = (await eventsTogether(me.id, otherId)).at(-1);
-  if (!event) return { error: "We met counts when you've both checked in at the same event." };
+  const event = await hereTogether(me.id, otherId);
+  if (!event) return { error: "We met counts when you've both checked in at the same event today." };
   if (!(await allow(`met:${me.id}`, 100, 86_400))) return { error: "That's a lot of meetings for one day. Try again tomorrow." };
 
   await query("INSERT INTO meetings (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, otherId]);

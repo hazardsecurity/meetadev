@@ -1,6 +1,6 @@
 import "server-only";
 import { query } from "./db";
-import { CONFIRMED, eventsTogether } from "./events";
+import { CONFIRMED, HERE, hereTogether } from "./events";
 import { rank, score } from "./match";
 
 export type PublicProfile = {
@@ -173,8 +173,9 @@ export async function deck(me: PublicProfile, eventId: string): Promise<DeckCard
     `SELECT ${PUBLIC_COLS},
             EXISTS (SELECT 1 FROM connection_requests w WHERE w.from_user = p.user_id AND w.to_user = $1 AND w.status = 'pending') AS wants_me
        FROM event_members m JOIN profiles p ON p.user_id = m.user_id
-      WHERE m.event_id = $2 AND m.checked_in_at IS NOT NULL
-        AND p.onboarded AND p.listed AND p.user_id <> $1 AND ${NOT_BLOCKED} AND ${UNDECIDED}
+      WHERE m.event_id = $2 AND ${HERE()}
+        -- Checking in is the opt-in for the deck, so people hidden from the directory are here too (D-007).
+        AND p.onboarded AND p.user_id <> $1 AND ${NOT_BLOCKED} AND ${UNDECIDED}
         AND NOT EXISTS (SELECT 1 FROM passes x WHERE x.event_id = $2 AND x.from_user = $1 AND x.to_user = p.user_id)
       LIMIT 2000`,
     [me.user_id, eventId],
@@ -192,7 +193,7 @@ export async function connectionsHere(userId: string, eventId: string) {
   return query<Pick<PublicProfile, "user_id" | "handle" | "name" | "color" | "photo_url">>(
     `SELECT p.user_id, p.handle, p.name, p.color, p.photo_url
        FROM event_members m JOIN profiles p ON p.user_id = m.user_id
-      WHERE m.event_id = $2 AND m.checked_in_at IS NOT NULL AND p.user_id <> $1 AND ${NOT_BLOCKED}
+      WHERE m.event_id = $2 AND ${HERE()} AND p.user_id <> $1 AND ${NOT_BLOCKED}
         AND EXISTS (SELECT 1 FROM connection_requests r WHERE r.status = 'accepted'
                      AND ((r.from_user = $1 AND r.to_user = p.user_id) OR (r.from_user = p.user_id AND r.to_user = $1)))
       ORDER BY m.checked_in_at DESC LIMIT 20`,
@@ -204,7 +205,7 @@ export async function connectionsHere(userId: string, eventId: string) {
 // Met: each person taps "We met"; it counts once both have, at an event both are Here at.
 
 export type MeetStatus = {
-  /** The latest event we're both Here at. Null: "We met" isn't possible right now. */
+  /** The latest event we're both Here at today. Null: "We met" isn't possible right now. */
   event: { id: string; name: string } | null;
   state: "none" | "mine" | "theirs" | "both";
   /** An earlier event where we met. */
@@ -213,8 +214,8 @@ export type MeetStatus = {
 
 /** Their half only shows when we're connected: a one-sided "We met" between strangers stays private. */
 export async function meetStatus(me: string, other: string, connected: boolean): Promise<MeetStatus> {
-  const [together, claims] = await Promise.all([
-    eventsTogether(me, other),
+  const [here, claims] = await Promise.all([
+    hereTogether(me, other),
     query<{ event_id: string; name: string; mine: boolean; theirs: boolean }>(
       `SELECT a.event_id, e.name, bool_or(a.from_user = $1) AS mine, bool_or(a.from_user = $2) AS theirs
          FROM meetings a JOIN events e ON e.id = a.event_id
@@ -223,8 +224,7 @@ export async function meetStatus(me: string, other: string, connected: boolean):
       [me, other],
     ),
   ]);
-  const last = together.at(-1);
-  const event = last ? { id: last.id, name: last.name } : null;
+  const event = here ? { id: here.id, name: here.name } : null;
   const now = claims.find((c) => c.event_id === event?.id);
   const earlier = claims.find((c) => c.event_id !== event?.id && c.mine && c.theirs)?.name ?? null;
   const state = now?.mine && now.theirs ? "both" : now?.mine ? "mine" : now?.theirs && connected ? "theirs" : "none";

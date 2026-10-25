@@ -8,7 +8,9 @@ import { randomBytes } from "node:crypto";
 import pg from "pg";
 
 const url = process.env.DATABASE_URL ?? "";
-if (!/@(localhost|127\.0\.0\.1)(:|\/)/.test(url)) {
+// Checks the host the client will really connect to, not "@localhost" anywhere in the URL (BUG-024).
+const host = URL.canParse(url) ? new URL(url).hostname : "";
+if (host !== "localhost" && host !== "127.0.0.1") {
   console.error("seed:demo only runs against a local database.");
   process.exit(1);
 }

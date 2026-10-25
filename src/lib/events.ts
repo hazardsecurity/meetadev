@@ -42,9 +42,17 @@ export const membership = cache(async (eventId: string, userId: string) => {
   return rows[0]?.role ?? null;
 });
 
-/** Here: checked in with the event's check-in code. */
+const LAGOS_TODAY = "(now() AT TIME ZONE 'Africa/Lagos')::date";
+
+/** Here, as SQL for an event_members row "m": checked in today (Lagos), and today is the event's date when it
+ *  has one. Being here ends with the day (D-005); checked_in_at itself is kept as history. */
+export const HERE = (m = "m") =>
+  `${m}.checked_in_at >= (date_trunc('day', now() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
+   AND coalesce((SELECT starts_on FROM events WHERE id = ${m}.event_id), ${LAGOS_TODAY}) = ${LAGOS_TODAY}`;
+
+/** Here: checked in with the event's check-in code, today. */
 export async function isHere(eventId: string, userId: string) {
-  const rows = await query("SELECT 1 FROM event_members WHERE event_id = $1 AND user_id = $2 AND checked_in_at IS NOT NULL", [eventId, userId]);
+  const rows = await query(`SELECT 1 FROM event_members m WHERE m.event_id = $1 AND m.user_id = $2 AND ${HERE()}`, [eventId, userId]);
   return rows.length > 0;
 }
 
@@ -72,9 +80,12 @@ export async function myEvents(userId: string) {
   );
 }
 
+/** Today's date in Lagos, as YYYY-MM-DD. */
+export const lagosToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
+
 /** Upcoming (soonest first, undated last) and past (latest first), by the day in Lagos. */
 export function splitByDate<T extends { starts_on: string | null }>(events: T[]) {
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(new Date());
+  const today = lagosToday();
   const upcoming = events.filter((e) => !e.starts_on || e.starts_on >= today)
     .sort((a, b) => (a.starts_on ?? "9999").localeCompare(b.starts_on ?? "9999"));
   const past = events.filter((e) => e.starts_on && e.starts_on < today);
@@ -104,8 +115,20 @@ export async function eventsTogether(a: string, b: string) {
   );
 }
 
+/** The latest event two people are both Here at right now, or null: where a "We met" counts. */
+export async function hereTogether(a: string, b: string) {
+  const rows = await query<{ id: string; slug: string; name: string }>(
+    `SELECT e.id, e.slug, e.name
+       FROM event_members x JOIN event_members y ON y.event_id = x.event_id JOIN events e ON e.id = x.event_id
+      WHERE x.user_id = $1 AND y.user_id = $2 AND ${HERE("x")} AND ${HERE("y")}
+      ORDER BY greatest(x.checked_in_at, y.checked_in_at) DESC LIMIT 1`,
+    [a, b],
+  );
+  return rows[0] ?? null;
+}
+
 export async function hereCount(eventId: string) {
-  const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM event_members WHERE event_id = $1 AND checked_in_at IS NOT NULL", [eventId]);
+  const rows = await query<{ n: number }>(`SELECT count(*)::int AS n FROM event_members m WHERE m.event_id = $1 AND ${HERE()}`, [eventId]);
   return rows[0].n;
 }
 
@@ -171,17 +194,18 @@ export type ReportRow = {
   created_at: Date;
   reported_id: string;
   reported_name: string;
-  reported_handle: string;
+  reported_handle: string | null; // null once the reported person has deleted their account
   reporter_name: string;
 };
 
 export async function eventReports(eventId: string) {
   return query<ReportRow>(
     `SELECT r.id, r.reason, r.created_at, r.reported AS reported_id,
-            rp.name AS reported_name, rp.handle AS reported_handle, ap.name AS reporter_name
+            coalesce(rp.name, 'A deleted account') AS reported_name, rp.handle AS reported_handle,
+            coalesce(ap.name, 'Someone who deleted their account') AS reporter_name
        FROM reports r
-       JOIN profiles rp ON rp.user_id = r.reported
-       JOIN profiles ap ON ap.user_id = r.reporter
+       LEFT JOIN profiles rp ON rp.user_id = r.reported
+       LEFT JOIN profiles ap ON ap.user_id = r.reporter
       WHERE r.event_id = $1
       ORDER BY r.created_at DESC LIMIT 100`,
     [eventId],
@@ -246,8 +270,14 @@ const LEADER_CTE = `
     SELECT *, rank() OVER (ORDER BY met DESC)::int AS rank FROM scored
   )`;
 
-export async function leaderboard(eventId: string, limit = 50) {
-  return query<LeaderRow>(`${LEADER_CTE} SELECT * FROM ranked ORDER BY rank, name LIMIT $2`, [eventId, limit]);
+/** The board as one person sees it: people they've blocked, or who blocked them, aren't on it (R-045). */
+export async function leaderboard(eventId: string, viewerId: string, limit = 50) {
+  return query<LeaderRow>(
+    `${LEADER_CTE} SELECT * FROM ranked
+      WHERE NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker = $3 AND b.blocked = ranked.user_id) OR (b.blocker = ranked.user_id AND b.blocked = $3))
+      ORDER BY rank, name LIMIT $2`,
+    [eventId, limit, viewerId],
+  );
 }
 
 export async function myStanding(eventId: string, userId: string) {

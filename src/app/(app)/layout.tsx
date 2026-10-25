@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
+import { SignInLink } from "@/components/SignInLink";
 import { currentUser } from "@/lib/auth";
 import { EventSwitcher } from "@/components/EventSwitcher";
 import { InboxPulse } from "@/components/InboxPulse";
@@ -36,9 +38,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {member ? (
             <Nav unread={unread} peopleHref={peopleHref} />
           ) : me ? (
-            <Link className="btn btn--white btn--sm" href="/onboarding">Finish my badge</Link>
+            <Suspense fallback={<Link className="btn btn--white btn--sm" href="/onboarding">Finish my badge</Link>}>
+              <SignInLink to="/onboarding">Finish my badge</SignInLink>
+            </Suspense>
           ) : (
-            <Link className="btn btn--white btn--sm" href="/login">Sign in</Link>
+            <Suspense fallback={<Link className="btn btn--white btn--sm" href="/login">Sign in</Link>}>
+              <SignInLink to="/login">Sign in</SignInLink>
+            </Suspense>
           )}
         </div>
       </header>
