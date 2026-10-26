@@ -3,6 +3,7 @@ import { createAccount, findAccount, type Identity } from "./accounts";
 import { safeNext, startSession } from "./auth";
 import { query } from "./db";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 
 export type SignInError = "busy" | "suspended";
 
@@ -21,6 +22,7 @@ export async function completeSignIn(
     isNew = true;
   }
   await startSession(userId);
+  if (isNew) await track(userId, "signed up");
   const next = safeNext(opts.next);
   return { to: isNew ? `/onboarding?next=${encodeURIComponent(next)}` : next };
 }

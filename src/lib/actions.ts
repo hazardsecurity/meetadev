@@ -9,6 +9,7 @@ import { pool, query } from "./db";
 import { CHECKIN_REQUIRED, hereTogether } from "./events";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 import { firstError, profileSchema, type ProfileInput } from "./validation";
 
 // `values` echoes what was submitted so a form can refill itself after an error
@@ -75,6 +76,7 @@ export async function saveProfile(input: ProfileInput, next: string): Promise<Fo
       tidyCities(p.cities),
     ],
   );
+  if (!me.onboarded) await track(me.id, "badge created");
   revalidatePath("/", "layout");
   redirect(me.onboarded ? "/me?saved=1" : `/welcome?next=${encodeURIComponent(safeNext(next))}`);
 }
@@ -161,6 +163,8 @@ export async function wantToMeet(toUserId: string, slug?: string): Promise<FormS
   if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
 
   const result = await recordWant(me.id, toUserId, event.id);
+  await track(me.id, "meet tapped", { event_id: event.id, matched: result === "connected" });
+  if (result === "connected") await track(me.id, "matched", { event_id: event.id });
   if (result === "connected")
     await notify(toUserId, { title: "It's a match", body: `You and ${me.name} both want to meet. Say hi.`, url: `/chat/${me.handle}`, tag: `match-${me.id}` });
   return { ok: result === "wanted" ? "wanted" : "connected" };
@@ -179,6 +183,7 @@ export async function pass(slug: string, userId: string): Promise<FormState> {
   if (!event) return { error: "They're not at this event any more." };
   if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
   await query("INSERT INTO passes (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, userId]);
+  await track(me.id, "passed", { event_id: event.id });
   return { ok: "passed" };
 }
 
@@ -205,6 +210,7 @@ export async function weMet(otherId: string): Promise<FormState> {
   await query("INSERT INTO meetings (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, otherId]);
   const want = await recordWant(me.id, otherId, event.id);
   const theirs = await query("SELECT 1 FROM meetings WHERE event_id = $1 AND from_user = $2 AND to_user = $3", [event.id, otherId, me.id]);
+  await track(me.id, theirs.length ? "met confirmed" : "we met tapped", { event_id: event.id });
   if (theirs.length)
     await notify(otherId, { title: `You and ${me.name} met`, body: `+1 on the ${event.name} leaderboard.`, url: `/e/${event.slug}/leaderboard`, tag: `met-${me.id}` });
   // Their half stays private until they're connected to us; once they are, nudge them.

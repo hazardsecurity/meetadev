@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             (SELECT count(*)::int FROM communities WHERE status = 'pending') AS communities`,
   );
   return (
-    <div className="stack admin" style={{ "--gap": "20px" } as React.CSSProperties}>
+    <div className="stack admin ph-no-capture" style={{ "--gap": "20px" } as React.CSSProperties}>
       <div className="stack" style={{ "--gap": "4px" } as React.CSSProperties}>
         <p className="eyebrow">meetadev admin</p>
         <AdminNav counts={{ "/admin/organisers": w.apps, "/admin/reports": w.reports, "/admin/communities": w.communities }} />

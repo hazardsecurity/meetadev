@@ -44,7 +44,7 @@ export default async function ChatPage({ params }: PageProps<"/chat/[handle]">) 
             <span className="person__meta">{p.headline || "Tap to see their badge"}</span>
           </span>
         </Link>
-        {contact?.whatsapp && <a className="btn btn--white btn--sm" href={waLink(contact.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+        {contact?.whatsapp && <a className="btn btn--white btn--sm ph-no-capture" href={waLink(contact.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </header>
       <MetBar otherId={p.user_id} firstName={first} status={met} connected />
       <ChatThread me={me.id} other={p.user_id} firstName={first} initial={messages}

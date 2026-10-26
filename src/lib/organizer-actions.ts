@@ -13,6 +13,7 @@ import { isAdmin } from "./organizers";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
+import { track } from "./analytics";
 
 const isGdgPage = (v: string) => /^https:\/\/gdg\.community\.dev\/./i.test(v);
 
@@ -69,6 +70,7 @@ export async function applyForOrganizer(_prev: FormState, form: FormData): Promi
     "INSERT INTO organizer_requests (user_id, chapter_name, chapter_url, city, note, community_id) VALUES ($1, $2, $3, $4, $5, $6)",
     [me.id, community.name, community.url, community.city, note, community.id],
   );
+  await track(me.id, "organiser applied");
   revalidatePath("/events/new");
   return { ok: "sent" };
 }

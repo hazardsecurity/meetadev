@@ -1,5 +1,6 @@
 "use client";
 
+import { resetAnalytics } from "@/lib/analytics-client";
 import { Bell, BellOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { logout } from "@/lib/actions";
@@ -30,7 +31,7 @@ async function forgetDevice() {
 /** Log out, and stop this device showing the account's notifications to whoever uses it next. */
 export function LogoutButton() {
   return (
-    <form action={async () => { await forgetDevice().catch(() => {}); await logout(); }}>
+    <form action={async () => { await forgetDevice().catch(() => {}); resetAnalytics(); await logout(); }}>
       <button className="btn btn--ghost btn--sm">Log out</button>
     </form>
   );

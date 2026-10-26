@@ -6,6 +6,7 @@ import { canChat, iso, type Message } from "./chat";
 import { query } from "./db";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 
 export async function sendMessage(toUserId: string, raw: string): Promise<{ error?: string; message?: Message }> {
   const me = await currentUser();
@@ -26,6 +27,7 @@ export async function sendMessage(toUserId: string, raw: string): Promise<{ erro
     url: `/chat/${me.handle}`,
     tag: `chat-${me.id}`,
   });
+  await track(me.id, "message sent");
   revalidatePath("/connections");
   return { message: rows[0] };
 }

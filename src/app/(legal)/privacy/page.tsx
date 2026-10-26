@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           <li>You sign in with Google. We get your name, email address, profile photo and Google account ID. Never your password.</li>
           <li>Your phone number, WhatsApp and contact email are shown only to people you&apos;re connected with, which happens when you both chose to meet.</li>
           <li>Choosing &ldquo;Meet&rdquo; on someone is private. They only find out if they chose to meet you too.</li>
-          <li>We don&apos;t sell your data, show ads or use tracking or analytics tools.</li>
+          <li>We don&apos;t sell your data or show ads. We use PostHog to see how people use meetadev so we can improve it, and you can turn that off on My badge.</li>
           <li>You can delete your account yourself, any time, from My badge.</li>
         </ul>
       </section>
@@ -53,6 +53,17 @@ export default function PrivacyPage() {
           Your IP address, used to limit sign-ups and other actions so the service can&apos;t be abused. If you turn on notifications,
           your browser&apos;s push address for this device. Our hosting provider keeps standard server logs.
         </p>
+        <h3 className="legal__h3" id="analytics">How you use the app (analytics)</h3>
+        <p>
+          We use PostHog to understand how meetadev is used: pages you open, buttons you tap, your device and browser type, rough
+          location from your IP address, and steps such as signing up, joining an event, choosing Meet or Pass, matching, sending a
+          message (not what it says) and confirming you met. These are linked to your account ID, not your name or email. We also
+          record some sessions as screen replays to find what&apos;s confusing. Everything you type is hidden in them, and chats,
+          contact details and admin pages are left out completely. If your browser sends Do Not Track, none of this is collected.
+        </p>
+        <p>
+          You can turn analytics off any time on <b>My badge → Help improve meetadev</b>. It stays off on that browser.
+        </p>
       </section>
 
       <section className="stack">
@@ -71,20 +82,22 @@ export default function PrivacyPage() {
         <ul>
           <li><b>To provide the service you signed up for:</b> your account, badge, deck, matches, connections, chat and leaderboard.</li>
           <li><b>Your consent:</b> the optional details you add, and notifications, which you can turn off at any time.</li>
-          <li><b>Our legitimate interests:</b> keeping people safe and stopping abuse, through rate limits, reports, blocks and event bans.</li>
+          <li><b>Our legitimate interests:</b> keeping people safe and stopping abuse, through rate limits, reports, blocks and event bans; and understanding how the app is used so we can improve it, which you can switch off.</li>
           <li><b>Legal obligations:</b> where the law requires us to keep or share information.</li>
         </ul>
       </section>
 
       <section className="stack">
         <h2 className="h2">Cookies and storage</h2>
-        <p>We only use what the site needs to work. There are no advertising or tracking cookies, so there is nothing to opt out of.</p>
+        <p>We use what the site needs to work, plus analytics storage you can turn off. There are no advertising cookies.</p>
         <ul>
           <li><b>dfi_session:</b> keeps you signed in, for up to 30 days.</li>
           <li><b>Sign-in check:</b> a short-lived cookie that protects the Google sign-in step, for about 10 minutes.</li>
           <li><b>dfi_event:</b> remembers the last event you opened, for 90 days.</li>
           <li><b>mad_start:</b> remembers that you saw the welcome screen, for a year.</li>
           <li><b>Theme:</b> your light or dark choice, saved in your browser only.</li>
+          <li><b>Analytics (PostHog):</b> a random ID and visit details saved in your browser&apos;s local storage, until you clear it or turn analytics off.</li>
+          <li><b>mad_no_analytics:</b> remembers that you turned analytics off, for a year.</li>
         </ul>
       </section>
 
@@ -95,6 +108,7 @@ export default function PrivacyPage() {
           <li><b>Google:</b> sign-in.</li>
           <li><b>Vercel:</b> hosting the website.</li>
           <li><b>Neon:</b> our database.</li>
+          <li><b>PostHog:</b> product analytics and screen replays, as described above.</li>
           <li><b>Your browser&apos;s push service</b> (for example Google, Apple or Mozilla): delivering notifications you turned on, which can include a short preview of a message.</li>
         </ul>
         <p>
@@ -110,6 +124,8 @@ export default function PrivacyPage() {
           <li>Sign-in sessions: up to 30 days, or until you log out.</li>
           <li>Rate-limit records: a counter tied to your IP address or account, replaced as soon as its time window ends.</li>
           <li>Events you created stay up for the people who joined them, unless an organiser deletes the event.</li>
+          <li>Analytics: usage events for up to 12 months and screen replays for up to 30 days. After you delete your account they
+            are tied only to an ID that no longer points to anyone.</li>
         </ul>
       </section>
 

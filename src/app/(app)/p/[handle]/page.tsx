@@ -60,7 +60,7 @@ export default async function ProfilePage({ params }: PageProps<"/p/[handle]">) 
             <Link href="/onboarding" className="btn btn--white btn--block">Edit profile</Link>
           </div>
         ) : contact ? (
-          <div className="card card--green stack">
+          <div className="card card--green stack ph-no-capture">
             <h2 className="h2">Say hi to {first} 👋</h2>
             <Link className="btn btn--block" href={`/chat/${p.handle}`}>Message {first}</Link>
             {contact.whatsapp && <a className="btn btn--white btn--block" href={waLink(contact.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}

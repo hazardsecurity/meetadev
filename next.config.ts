@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { POSTHOG_ASSETS, POSTHOG_HOST } from "./src/lib/analytics-config";
 
 // Each deploy gets an ID baked into the page and the /api/version route, so
 // open tabs can notice a newer version and offer to refresh.
@@ -11,6 +12,15 @@ const nextConfig: NextConfig = {
   // Keep tabs someone just visited for 30s, so switching back is instant.
   // Actions that change data still refresh what they touch.
   experimental: { staleTimes: { dynamic: 30 } },
+  // Analytics goes through our own domain (/ingest), so ad blockers don't drop it and no third-party host is contacted directly.
+  async rewrites() {
+    return [
+      { source: "/ingest/static/:path*", destination: `${POSTHOG_ASSETS}/static/:path*` },
+      { source: "/ingest/array/:path*", destination: `${POSTHOG_ASSETS}/array/:path*` },
+      { source: "/ingest/:path*", destination: `${POSTHOG_HOST}/:path*` },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

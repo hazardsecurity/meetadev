@@ -6,6 +6,7 @@ import { BadgeQR } from "@/components/BadgeQR";
 import { DeleteAccount } from "@/components/DeleteAccount";
 import { LegalLinks } from "@/components/LegalLinks";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { AnalyticsToggle } from "@/components/Analytics";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { requireMember } from "@/lib/auth";
@@ -74,6 +75,8 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           </div>
           <ThemeSwitch />
         </div>
+
+        <AnalyticsToggle />
 
         <div className="stats">
           <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>

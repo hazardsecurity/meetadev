@@ -12,6 +12,7 @@ import { formatDate } from "./format";
 import { canCreateEvents, isAdmin } from "./organizers";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 import { firstError } from "./validation";
 import type { FormState } from "./actions";
 
@@ -126,6 +127,7 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
   } finally {
     client.release();
   }
+  await track(me.id, "event created");
   revalidatePath("/", "layout");
   redirect(`/e/${slug}/manage?created=1`);
 }
@@ -137,8 +139,10 @@ export async function joinEvent(slug: string): Promise<FormState> {
   if (!event) return { error: "That event doesn't exist any more." };
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
   if (!(await allow(`join:${me.id}`, 30, 3600))) return { error: "Slow down a little and try again in a few minutes." };
+  const wasMember = Boolean(await membership(event.id, me.id));
   await asMember(event.id, me.id, (c) => c.query(`INSERT INTO event_members (event_id, user_id) SELECT $1, $2 WHERE ${NOT_BANNED} ON CONFLICT DO NOTHING`, [event.id, me.id]));
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
+  if (!wasMember) await track(me.id, "event joined", { event_id: event.id });
   revalidatePath("/", "layout");
   redirect(`/e/${slug}?joined=1`);
 }

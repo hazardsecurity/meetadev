@@ -95,7 +95,7 @@ export function ChatThread({ me, other, firstName, initial, events = [] }: {
   const eventAt = (iso: string) => events.filter((e) => e.at <= iso).at(-1)?.name ?? null;
 
   return (
-    <div className="chat">
+    <div className="chat ph-no-capture">
       <div className="card chat__push"><PushToggle compact /></div>
       <div className="chat__list" aria-live="polite">
         {messages.length === 0 && (
