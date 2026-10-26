@@ -745,3 +745,20 @@ h1, h2, h3, p { margin: 0; }
 .legal-links { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.9rem; font-weight: 600; }
 .legal-links a { color: var(--muted); }
 .legal-links a:hover { color: var(--ink); }
+
+/* ---------- admin console ---------- */
+.admin-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.admin-nav__tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 2px solid var(--line); border-bottom-width: 3px; font-weight: 700; font-size: 0.9rem; color: var(--muted); background: var(--surface); }
+.admin-nav__tab[aria-current="page"] { color: var(--blue-ink); background: var(--blue-soft); border-color: var(--blue-line); }
+.admin-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.admin-tile { display: grid; gap: 2px; align-content: start; }
+.admin-tile strong { font-size: 2rem; line-height: 1.1; letter-spacing: -0.02em; }
+.admin-todo { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.admin-bars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 180px; }
+.admin-bars__col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; align-items: end; justify-items: center; gap: 4px; }
+.admin-bars__bar { width: 100%; min-height: 3px; border-radius: 6px 6px 2px 2px; background: var(--blue); align-self: end; }
+.admin-bars__n, .admin-bars__day { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.admin-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.admin-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 0; border-bottom: 2px solid var(--line-soft); }
+.admin-list li:last-child { border-bottom: 0; }
+.admin-users { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }

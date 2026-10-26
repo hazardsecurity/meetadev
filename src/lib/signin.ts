@@ -1,9 +1,10 @@
 import "server-only";
 import { createAccount, findAccount, type Identity } from "./accounts";
 import { safeNext, startSession } from "./auth";
+import { query } from "./db";
 import { allow } from "./ratelimit";
 
-export type SignInError = "busy";
+export type SignInError = "busy" | "suspended";
 
 /** Signs in (creating the account on first visit) and returns where to go next. */
 export async function completeSignIn(
@@ -11,6 +12,7 @@ export async function completeSignIn(
   opts: { ip: string; next: string },
 ): Promise<{ to: string } | { error: SignInError }> {
   let userId = await findAccount(identity);
+  if (userId && (await query("SELECT 1 FROM users WHERE id = $1 AND suspended_at IS NOT NULL", [userId])).length) return { error: "suspended" };
   let isNew = false;
   if (!userId) {
     // Venue Wi-Fi puts a whole room behind one IP; a verified Google account is the real gate.

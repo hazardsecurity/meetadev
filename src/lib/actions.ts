@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { erasedKey, KEPT_AFTER_DELETE } from "./accounts";
+import { eraseUser } from "./accounts";
 import { currentUser, endSession, safeNext } from "./auth";
 import { tidyCities } from "./cities";
 import { pool, query } from "./db";
-import { CHECKIN_REQUIRED, CONFIRMED, hereTogether } from "./events";
+import { CHECKIN_REQUIRED, hereTogether } from "./events";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError, profileSchema, type ProfileInput } from "./validation";
@@ -41,32 +41,7 @@ export async function deleteAccount(typed: string): Promise<FormState> {
   );
   if (solo[0]) return { error: `You're the only organiser of ${solo[0].name}. Make someone else an organiser first.` };
 
-  const client = await pool().connect();
-  try {
-    await client.query("BEGIN");
-    const { rows } = await client.query<{ id: string }>(
-      "INSERT INTO users (email) VALUES ('deleted+' || gen_random_uuid() || '@meetadev.invalid') RETURNING id",
-    );
-    const standIn = rows[0].id;
-    await client.query(`UPDATE meetings a SET from_user = $2 WHERE a.from_user = $1 AND ${CONFIRMED}`, [me.id, standIn]);
-    await client.query(
-      `UPDATE meetings a SET to_user = $2 WHERE a.to_user = $1
-         AND EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = $2 AND b.to_user = a.from_user)`,
-      [me.id, standIn],
-    );
-    const { rows: [{ google_sub }] } = await client.query<{ google_sub: string | null }>("SELECT google_sub FROM users WHERE id = $1", [me.id]);
-    await client.query("UPDATE users SET erased_key = $2 WHERE id = $1", [standIn, google_sub ? erasedKey(google_sub) : null]);
-    // Reports I made stay too, without my name; they're about someone else, and never come back to me.
-    for (const [table, column] of [...KEPT_AFTER_DELETE, ["reports", "reporter"]])
-      await client.query(`UPDATE ${table} SET ${column} = $2 WHERE ${column} = $1`, [me.id, standIn]);
-    await client.query("DELETE FROM users WHERE id = $1", [me.id]);
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  await eraseUser(me.id);
   await endSession();
   redirect("/");
 }

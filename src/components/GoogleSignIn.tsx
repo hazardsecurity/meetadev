@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { LEGAL } from "@/lib/legal";
 import { AyoSays, type Mood } from "./Ayo";
 
 const ERRORS: Record<string, string> = {
@@ -9,6 +10,7 @@ const ERRORS: Record<string, string> = {
   expired: "That took a little too long. Let's try again.",
   failed: "Google didn't let us in that time. Please try again.",
   busy: "Lots of people are joining from this network. Wait a few minutes and try again.",
+  suspended: `This account has been suspended for breaking the community guidelines. If you think that's a mistake, email ${LEGAL.email}.`,
   config: "Google sign-in isn't set up yet. Organisers: add the Google keys (see README).",
   devemail: "Test logins must end in @example.test.",
 };

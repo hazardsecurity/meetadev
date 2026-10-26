@@ -46,7 +46,7 @@ export const currentUser = cache(async (): Promise<Me | null> => {
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        LEFT JOIN profiles p ON p.user_id = u.id
-      WHERE s.token_hash = $1 AND s.expires_at > now()`,
+      WHERE s.token_hash = $1 AND s.expires_at > now() AND u.suspended_at IS NULL`,
     [sha256(token)],
   );
   return rows[0] ?? null;
