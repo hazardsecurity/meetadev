@@ -4,9 +4,8 @@ import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { PushToggle } from "@/components/PushToggle";
+import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
-import { logout } from "@/lib/actions";
 import { requireMember } from "@/lib/auth";
 import { counts, profileOf } from "@/lib/people";
 
@@ -81,7 +80,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
 
         <div className="row" style={{ justifyContent: "space-between" }}>
           <Link href={`/p/${p.handle}`} className="link">See my public profile</Link>
-          <form action={logout}><button className="btn btn--ghost btn--sm">Log out</button></form>
+          <LogoutButton />
         </div>
         {!p.listed && <p className="hint">You&apos;re hidden from the directory. People can still reach you through your QR code.</p>}
       </section>

@@ -3,14 +3,13 @@ import { cache } from "react";
 import type { CommunityLite } from "./community-kinds";
 import { tidyCity } from "./cities";
 import { pool, query } from "./db";
+import { slugify } from "./format";
 
 export type Community = CommunityLite & { status: "active" | "pending" };
 const COLS = "c.id, c.slug, c.name, c.kind, c.city, c.country, c.url, c.status";
 
 export function slugifyCommunity(name: string, city: string) {
-  const base = `${name} ${name.toLowerCase().includes(city.toLowerCase()) ? "" : city}`
-    .toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-  return base || "community";
+  return slugify(`${name} ${name.toLowerCase().includes(city.toLowerCase()) ? "" : city}`, 60) || "community";
 }
 
 /** Active communities matching a name or city, for the organiser picker. */

@@ -2,6 +2,7 @@
 
 import { Bell, BellOff } from "lucide-react";
 import { useEffect, useState } from "react";
+import { logout } from "@/lib/actions";
 
 type State = "loading" | "unsupported" | "ios-install" | "blocked" | "off" | "on";
 
@@ -15,6 +16,24 @@ function keyBytes(base64: string) {
 
 async function registration() {
   return (await navigator.serviceWorker.getRegistration("/")) ?? navigator.serviceWorker.register("/sw.js", { scope: "/" });
+}
+
+/** Stop push on this device and tell the server to forget it. */
+async function forgetDevice() {
+  const reg = await navigator.serviceWorker?.getRegistration("/");
+  const sub = await reg?.pushManager.getSubscription();
+  if (!sub) return;
+  await fetch("/api/push", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+  await sub.unsubscribe();
+}
+
+/** Log out, and stop this device showing the account's notifications to whoever uses it next. */
+export function LogoutButton() {
+  return (
+    <form action={async () => { await forgetDevice().catch(() => {}); await logout(); }}>
+      <button className="btn btn--ghost btn--sm">Log out</button>
+    </form>
+  );
 }
 
 /** "Turn on notifications" for this device. Asks for permission only when tapped. */
@@ -59,12 +78,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
   const turnOff = async () => {
     setBusy(true);
     try {
-      const reg = await navigator.serviceWorker.getRegistration("/");
-      const sub = await reg?.pushManager.getSubscription();
-      if (sub) {
-        await fetch("/api/push", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
-        await sub.unsubscribe();
-      }
+      await forgetDevice();
       setState("off");
     } finally {
       setBusy(false);

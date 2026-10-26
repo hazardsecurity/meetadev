@@ -60,6 +60,4 @@ export async function requireMember(next: string) {
   return me as Me & { handle: string; name: string };
 }
 
-export function safeNext(value: unknown, fallback = "/events") {
-  return typeof value === "string" && /^\/(?!\/)[^\\]*$/.test(value) ? value : fallback;
-}
+export { safeNext } from "./links";

@@ -25,6 +25,23 @@ export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { i
     window.addEventListener(UNREAD_EVENT, on);
     return () => window.removeEventListener(UNREAD_EVENT, on);
   }, []);
+  // Android's Back button closes the keyboard but leaves the field focused, which keeps
+  // the tab bar hidden (see globals.css). Once the screen grows back, let go of the field.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!className.includes("tabbar") || !vv) return;
+    let low = vv.height;
+    const onFocus = () => { low = vv.height; };
+    const onResize = () => {
+      low = Math.min(low, vv.height);
+      const field = document.activeElement;
+      // shortcut: turning the phone while typing can also look like "grew back"; watch orientation if people notice.
+      if (vv.height - low > 150 && field instanceof HTMLElement && field.matches("input, textarea, select, [contenteditable='true']")) field.blur();
+    };
+    document.addEventListener("focusin", onFocus);
+    vv.addEventListener("resize", onResize);
+    return () => { document.removeEventListener("focusin", onFocus); vv.removeEventListener("resize", onResize); };
+  }, [className]);
   const unreadNow = live ?? unread;
   const href = (key: string) =>
     ({

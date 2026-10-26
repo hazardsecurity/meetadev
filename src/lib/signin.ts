@@ -13,7 +13,8 @@ export async function completeSignIn(
   let userId = await findAccount(identity);
   let isNew = false;
   if (!userId) {
-    if (!(await allow(`signup:${opts.ip}`, 20, 3600))) return { error: "busy" };
+    // Venue Wi-Fi puts a whole room behind one IP; a verified Google account is the real gate.
+    if (!(await allow(`signup:${opts.ip}`, 500, 3600))) return { error: "busy" };
     userId = await createAccount(identity);
     isNew = true;
   }
