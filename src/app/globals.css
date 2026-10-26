@@ -104,7 +104,7 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- buttons: chunky, press down into their shadow ---------- */
 .btn {
-  --bg: var(--blue); --shade: var(--blue-shade); --fg: #fff;
+  --bg: var(--accent, var(--blue)); --shade: var(--accent-shade, var(--blue-shade)); --fg: var(--on-accent, #fff);
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5em;
   min-height: 50px; padding: 0 1.4em;
   border: 0; border-radius: var(--radius);
@@ -415,6 +415,21 @@ h1, h2, h3, p { margin: 0; }
 .event-head__band i { height: 6px; border-radius: 3px; }
 .event-head__band i:nth-child(1) { background: var(--blue); } .event-head__band i:nth-child(2) { background: var(--red); }
 .event-head__band i:nth-child(3) { background: var(--yellow); } .event-head__band i:nth-child(4) { background: var(--green); }
+/* Event colour picker: one dot per swatch, the chosen one ringed. */
+.swatches { border: 0; padding: 0; margin: 0; min-width: 0; }
+.swatches__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
+.swatch__dot { width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.18); }
+.swatch__dot--meetadev { background: conic-gradient(var(--blue) 0 25%, var(--red) 0 50%, var(--yellow) 0 75%, var(--green) 0); }
+.swatch input:checked + .swatch__dot { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--ink); }
+.swatch input:focus-visible + .swatch__dot { outline: 3px solid var(--blue); outline-offset: 5px; }
+/* An event's own colour (src/lib/accents.ts), set by its layout: the stripe, primary buttons, the deck card. */
+.event-accent { display: contents; }
+.event-accent .event-head__band i { background: var(--accent); }
+.event-accent .seg a.on { box-shadow: 0 3px 0 var(--accent); }
+.event-accent .join-code { color: var(--ink); } /* readable whatever the colour */
+.screen .event-head__band { grid-template-columns: repeat(4, 56px); gap: 8px; }
+.screen .event-head__band i { height: 10px; border-radius: 5px; }
 .event-head--compact .display { font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem); }
 .event-join { display: grid; gap: 28px; max-width: 980px; margin-inline: auto; padding-top: 16px; align-items: start; }
 @media (min-width: 860px) { .event-join { grid-template-columns: 1.2fr 1fr; padding-top: 40px; } }
@@ -537,6 +552,18 @@ h1, h2, h3, p { margin: 0; }
 .push__icon.is-on { background: var(--green); color: #fff; box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.15); }
 .push__text { display: grid; gap: 2px; flex: 1; min-width: 200px; }
 
+/* Arrival sheet: install the app, turn on notifications. */
+.ask {
+  position: fixed; z-index: 61; left: 50%; translate: -50% 0; bottom: calc(20px + env(safe-area-inset-bottom));
+  display: grid; gap: 14px; width: min(440px, calc(100% - 24px)); padding: 18px;
+  background: var(--surface); border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 20px;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.18);
+}
+.ask__title { margin: 0; font-size: 1.15rem; font-weight: 700; }
+.ask .push__text { min-width: 0; }
+.ask__foot { display: flex; justify-content: space-between; gap: 8px; }
+@media (max-width: 759px) { .ask { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+
 /* ---------- chat ---------- */
 .chat-page { display: grid; gap: 12px; }
 .chat__head { position: sticky; top: 64px; z-index: 10; display: flex; align-items: center; gap: 10px; padding: 10px 0; background: color-mix(in srgb, var(--paper) 95%, transparent); border-bottom: 2px solid var(--line-soft); }
@@ -551,14 +578,24 @@ h1, h2, h3, p { margin: 0; }
 .msg--me { margin-left: auto; background: var(--blue); color: #fff; border-bottom-right-radius: 6px; box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12); }
 .msg--them { background: var(--surface); border: 2px solid var(--line); border-bottom-width: 3px; border-bottom-left-radius: 6px; }
 .msg.is-pending { opacity: 0.6; }
+.contact { display: grid; gap: 8px; min-width: min(240px, 60vw); }
+.contact__name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.contact__rows { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+.contact__rows dt { font-size: 0.8rem; opacity: 0.75; align-self: center; }
+.contact__rows dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.contact__links { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.msg--me .contact .link { color: inherit; text-decoration: underline; }
+.contact__actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.chat__share { justify-self: start; min-height: 36px; padding-inline: 0.4em; }
+.chat__number { display: grid; gap: 8px; padding: 14px; }
 .msg__meta { font-size: 0.7rem; opacity: 0.75; justify-self: end; }
-.chat__composer {
-  position: sticky; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 10px 0 14px; background: var(--surface);
-}
+/* Pinned to the bottom: Share my contact (or the number it asks for) above the message box. */
+.chat__dock { position: sticky; bottom: 0; display: grid; gap: 8px; padding: 10px 0 14px; background: var(--surface); }
+.chat__composer { display: flex; gap: 8px; align-items: flex-end; }
 .chat__input { min-height: 50px; max-height: 160px; resize: none; }
 .chat__send { min-height: 50px; width: 54px; padding: 0; flex: none; }
 @media (max-width: 759px) {
-  .chat__composer { bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .chat__dock { bottom: calc(64px + env(safe-area-inset-bottom)); }
   .chat__head { top: 64px; }
 }
 .chats { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -670,7 +707,7 @@ h1, h2, h3, p { margin: 0; }
    Nav blurs the field when Android's Back button closes the keyboard. */
 @media (max-width: 759px) and (pointer: coarse) {
   body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .tabbar { display: none; }
-  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .chat__composer { bottom: 0; }
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="file"]), textarea, select, [contenteditable="true"]):focus) .chat__dock { bottom: 0; }
 }
 .msg__meta { opacity: 1; }
 .msg__meta > :not(.ticks) { opacity: 0.75; }
@@ -696,6 +733,7 @@ h1, h2, h3, p { margin: 0; }
 .dcard:active { cursor: grabbing; }
 .dcard--peek { z-index: 0; transform: translateY(10px) scale(0.96); background: var(--wash); }
 .dcard__top { position: relative; display: grid; place-items: center; padding: 28px 16px; background: var(--wash); border-bottom: 2px solid var(--line-soft); }
+.event-accent .dcard__top { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
 .dcard__here { position: absolute; left: 12px; top: 12px; }
 .dcard__body { display: grid; gap: 10px; padding: 14px 16px 16px; }
 .dcard__name { font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; overflow-wrap: anywhere; }
@@ -709,6 +747,21 @@ h1, h2, h3, p { margin: 0; }
 .round:disabled { opacity: 0.45; cursor: not-allowed; }
 .deck__keys { text-align: center; }
 @media (pointer: coarse) { .deck__keys { display: none; } }
+/* First-visit guide over the top card (as in Timelines' deck). */
+.coach {
+  grid-area: 1 / 1; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto;
+  border-radius: 20px; overflow: hidden; background: #17181a; color: #fff;
+}
+.coach__zone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 16px 12px; text-align: center; line-height: 1.3; }
+.coach__zone + .coach__zone { border-left: 1.5px dashed rgb(255 255 255 / 0.45); }
+.coach__zone small { font-size: 0.85rem; color: #dadce0; min-height: 2.6em; } /* two lines each, so both arrows line up */
+.coach__ok { grid-column: 1 / -1; justify-self: center; margin: 0 0 20px; min-width: 160px; }
+.stamp {
+  position: absolute; top: 18px; z-index: 2; padding: 2px 10px; border: 3px solid; border-radius: 10px; pointer-events: none;
+  font-weight: 800; font-size: 1.4rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--surface);
+}
+.stamp--meet { left: 16px; rotate: -12deg; color: var(--green-ink); }
+.stamp--pass { right: 16px; rotate: 12deg; color: var(--red-ink); }
 .deck-match { position: fixed; inset: 0; z-index: 40; overflow: auto; background: var(--surface); }
 .deck-match__faces { display: flex; }
 .deck-match__faces > * + * { margin-left: -24px; }

@@ -22,6 +22,7 @@ export default async function ScreenPage({ params, searchParams }: PageProps<"/e
     return (
       <main className="screen">
         <div className="screen__copy">
+          <div className="event-head__band" aria-hidden><i /><i /><i /><i /></div>
           <p className="eyebrow">You made it</p>
           <h1 className="display">{event.name}</h1>
           <p className="screen__lead">Scan to check in. Then swipe through the people who are here and meet the ones you match with.</p>
@@ -34,6 +35,7 @@ export default async function ScreenPage({ params, searchParams }: PageProps<"/e
   return (
     <main className="screen">
       <div className="screen__copy">
+        <div className="event-head__band" aria-hidden><i /><i /><i /><i /></div>
         <p className="eyebrow">Find the people you should meet</p>
         <h1 className="display">{event.name}</h1>
         <p className="screen__lead">Scan to join, then sign in with Google. Swipe through the people here and meet the ones you match with.</p>

@@ -34,7 +34,7 @@ export default async function NewEventPage() {
           <AyoSays mood={request?.status === "rejected" ? "sad" : "wave"} size={96}>
             {request?.status === "rejected"
               ? "Your last application wasn't approved. If something was missing, you can apply again."
-              : "Events on meetadev are run by GDG organisers. Tell us about your chapter and we'll check it."}
+              : "Events on meetadev are run by their organisers. Tell us about your community or event and we'll check it."}
           </AyoSays>
           <div className="card stack">
             <h1 className="h2">Apply to be an organiser</h1>

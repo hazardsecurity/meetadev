@@ -14,11 +14,12 @@ export type Event = {
   join_code: string;
   listed: boolean;
   community_id: string | null;
+  accent: string;
 };
 
 export type MemberRole = "attendee" | "organizer";
 
-const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.listed, e.community_id";
+const EVENT_COLS = "e.id, e.slug, e.name, e.city, to_char(e.starts_on, 'YYYY-MM-DD') AS starts_on, e.about, e.join_code, e.listed, e.community_id, e.accent";
 
 // No 0/O/1/I so codes survive being read off a projector.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

@@ -51,7 +51,7 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
   const saveDraft = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ owner: initial.contact_email, p, i })); } catch {} };
   useEffect(() => { if (restored && !editing && !pending) saveDraft(); });
   const step = STEPS[i];
-  // Coming from "I'm a GDG organiser": explain why organisers make a badge too.
+  // Coming from "I'm an event organiser": explain why organisers make a badge too.
   const organiser = !editing && next.startsWith("/events/new");
   const say = (p: ProfileInput) =>
     organiser && i === 0

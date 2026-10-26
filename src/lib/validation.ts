@@ -3,7 +3,7 @@ import { intentIds, levelIds, roleIds, STACK } from "./options";
 
 const trimmed = (max: number) => z.string().trim().max(max);
 
-const phone = z
+export const phone = z
   .string()
   .trim()
   .max(24)

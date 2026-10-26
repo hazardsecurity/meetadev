@@ -2,7 +2,7 @@
 export const SITE_URL = (process.env.APP_URL || "https://www.meetadev.xyz").replace(/\/$/, "");
 export const SITE_NAME = "meetadev";
 export const SITE_DESCRIPTION =
-  "Find the people you should meet at DevFest and GDG events: mentors, learners, collaborators and teams that are hiring. Contacts are only swapped when both people say yes.";
+  "Find the people you should meet at tech events and meetups: mentors, learners, collaborators and teams that are hiring. Contacts are only swapped when both people say yes.";
 
 const NOINDEX = { index: false, follow: false } as const;
 export const noindex = { robots: NOINDEX };

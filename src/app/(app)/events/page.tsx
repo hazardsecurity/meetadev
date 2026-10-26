@@ -56,8 +56,8 @@ export default async function EventsPage({ searchParams }: PageProps<"/events">)
 
       {!organiser && (
         <div className="card card--blue stack" style={{ "--gap": "10px" } as React.CSSProperties}>
-          <h2 className="h2">Are you a GDG organiser?</h2>
-          <p className="muted">Apply once, and you can create spaces for your chapter&apos;s events with an invite link, QR code and join code.</p>
+          <h2 className="h2">Are you an event organiser?</h2>
+          <p className="muted">Apply once, and you can create spaces for your events with an invite link, QR code and join code.</p>
           <Link className="btn" href="/events/new" style={{ justifySelf: "start" }}>Apply to organise</Link>
         </div>
       )}

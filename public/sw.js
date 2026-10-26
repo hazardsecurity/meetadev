@@ -9,8 +9,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",
-      icon: "/apple-icon",
-      badge: "/icon.svg",
+      icon: "/icon-192.png",
+      badge: "/badge-96.png",
+      vibrate: [180, 80, 180],
       tag: data.tag,
       renotify: !!data.tag,
       data: { url: data.url || "/" },

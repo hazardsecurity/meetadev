@@ -12,7 +12,7 @@ import { profileOf } from "@/lib/people";
 
 export const metadata: Metadata = {
   title: "Find events",
-  description: "DevFest and GDG events happening in your cities.",
+  description: "Tech events and meetups happening in your cities.",
 };
 
 export default async function DiscoverPage({ searchParams }: PageProps<"/discover">) {
@@ -47,10 +47,10 @@ export default async function DiscoverPage({ searchParams }: PageProps<"/discove
       </div>
 
       {cities.length === 0 ? (
-        <AyoSays mood="wave" size={84}>Add your city and I&apos;ll show you every DevFest and GDG event there.</AyoSays>
+        <AyoSays mood="wave" size={84}>Add your city and I&apos;ll show you every event there.</AyoSays>
       ) : events.length === 0 ? (
         <AyoSays mood="thinking" size={84}>
-          {`No upcoming events in ${cities.join(", ")} yet. Add a nearby city, or check back closer to DevFest season.`}
+          {`No upcoming events in ${cities.join(", ")} yet. Add a nearby city, or check back soon.`}
         </AyoSays>
       ) : (
         <div className="stack">

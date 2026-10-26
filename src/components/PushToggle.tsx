@@ -5,7 +5,8 @@ import { Bell, BellOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { logout } from "@/lib/actions";
 
-type State = "loading" | "unsupported" | "ios-install" | "blocked" | "off" | "on";
+export type PushState = "unsupported" | "ios-install" | "blocked" | "off" | "on";
+type State = "loading" | PushState;
 
 const KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
@@ -17,6 +18,28 @@ function keyBytes(base64: string) {
 
 async function registration() {
   return (await navigator.serviceWorker.getRegistration("/")) ?? navigator.serviceWorker.register("/sw.js", { scope: "/" });
+}
+
+/** Whether this device gets notifications, and if not, why. */
+export async function pushState(): Promise<PushState> {
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !KEY) return ios && !standalone ? "ios-install" : "unsupported";
+  if (Notification.permission === "denied") return "blocked";
+  const reg = await navigator.serviceWorker.getRegistration("/");
+  return (await reg?.pushManager.getSubscription()) ? "on" : "off";
+}
+
+/** Asks the browser for permission (call it from a tap), then saves this device's subscription. Throws if saving fails. */
+export async function enablePush(): Promise<PushState> {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return permission === "denied" ? "blocked" : "off";
+  const reg = await registration();
+  await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(KEY) }));
+  const res = await fetch("/api/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+  if (!res.ok) throw new Error("save failed");
+  return "on";
 }
 
 /** Stop push on this device and tell the server to forget it. */
@@ -44,31 +67,14 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      const standalone = window.matchMedia("(display-mode: standalone)").matches;
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !KEY) {
-        return setState(ios && !standalone ? "ios-install" : "unsupported");
-      }
-      if (Notification.permission === "denied") return setState("blocked");
-      const reg = await navigator.serviceWorker.getRegistration("/");
-      const sub = await reg?.pushManager.getSubscription();
-      setState(sub ? "on" : "off");
-    })().catch(() => setState("unsupported"));
+    pushState().then(setState, () => setState("unsupported"));
   }, []);
 
   const turnOn = async () => {
     setBusy(true);
     setError("");
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") { setState(permission === "denied" ? "blocked" : "off"); return; }
-      const reg = await registration();
-      await navigator.serviceWorker.ready;
-      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(KEY) }));
-      const res = await fetch("/api/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
-      if (!res.ok) throw new Error("save failed");
-      setState("on");
+      setState(await enablePush());
     } catch {
       setError("Couldn't turn on notifications. Try again.");
     } finally {

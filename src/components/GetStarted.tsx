@@ -10,7 +10,7 @@ type Slide = { title: string; body: string; art: () => React.ReactNode };
 const SLIDES: Slide[] = [
   {
     title: "meetadev",
-    body: "Meet the people you came to meet at DevFest and GDG events: mentors, learners, collaborators and teams that are hiring.",
+    body: "Meet the people you came to meet at tech events and meetups: mentors, learners, collaborators and teams that are hiring.",
     art: () => <ArtCrowd />,
   },
   {

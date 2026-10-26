@@ -292,3 +292,9 @@ CREATE TABLE IF NOT EXISTS admin_log (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS admin_log_created_idx ON admin_log (created_at DESC);
+
+-- The organiser's colour for their event's buttons and stripe; ids in src/lib/accents.ts.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS accent text NOT NULL DEFAULT 'meetadev';
+
+-- A message is text, or a contact card (body is the JSON snapshot of what was shared).
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'text';

@@ -17,7 +17,7 @@ import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import { connectionsHere, deck, directory, profileOf, suggestions, type PublicProfile } from "@/lib/people";
 import { jsonLd, noindex, SITE_URL } from "@/lib/site";
 
-// schema.org Event, so listed DevFest events can show in Google's event results.
+// schema.org Event, so listed events can show in Google's event results.
 function eventLd(e: Event) {
   if (!e.listed || !e.starts_on) return null;
   return {
