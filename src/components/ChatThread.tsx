@@ -126,7 +126,8 @@ export function ChatThread({ me, other, firstName, initial, events = [] }: {
         <textarea className="textarea chat__input" rows={1} maxLength={2000} value={draft} placeholder={`Message ${firstName}`} aria-label="Message"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
-        <button className="btn chat__send" aria-label="Send" disabled={!draft.trim()}><SendHorizontal size={20} /></button>
+        {/* Keep focus in the box: on a phone, losing it brings the tab bar back and moves Send before the tap lands (BUG-025). */}
+        <button className="btn chat__send" aria-label="Send" disabled={!draft.trim()} onMouseDown={(e) => e.preventDefault()}><SendHorizontal size={20} /></button>
       </form>
       {error && <p className="error" role="alert">{error}</p>}
     </div>
