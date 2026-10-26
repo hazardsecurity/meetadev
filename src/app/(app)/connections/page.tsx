@@ -37,7 +37,7 @@ export default async function ChatsPage() {
       {n === 0 ? (
         <>
           <div className="card">
-            <AyoSays mood="wave" size={72}>{`Once someone accepts your request, you can chat here. Your goal: meet ${GOAL} new people!`}</AyoSays>
+            <AyoSays mood="wave" size={72}>{`When you and someone both tap Meet, you can chat here. Your goal: meet ${GOAL} new people!`}</AyoSays>
           </div>
           <Link className="btn" href="/people" style={{ justifySelf: "start" }}>Find people</Link>
         </>

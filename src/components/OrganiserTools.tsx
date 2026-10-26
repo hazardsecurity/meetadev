@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { deleteEvent, dismissReport, leaveEvent, newCode, removeMember, setRole } from "@/lib/event-actions";
+import { deleteEvent, dismissReport, leaveEvent, newCheckinCode, newCode, removeMember, setRole } from "@/lib/event-actions";
 import type { MemberRow, ReportRow } from "@/lib/events";
 import { Avatar } from "./Avatar";
+import { LocalTime } from "./LocalTime";
 
 function useAct() {
   const [msg, setMsg] = useState("");
@@ -33,12 +34,40 @@ export function CodeTools({ slug, code }: { slug: string; code: string }) {
   );
 }
 
-export function MemberList({ slug, me, list }: { slug: string; me: string; list: MemberRow[] }) {
+export function CheckinTools({ slug }: { slug: string }) {
+  const { msg, pending, run } = useAct();
+  return (
+    <div className="stack" style={{ justifyItems: "center", "--gap": "8px" } as React.CSSProperties}>
+      <div className="row" style={{ justifyContent: "center" }}>
+        <Link className="btn btn--white btn--sm" href={`/e/${slug}/screen?show=checkin`} target="_blank">Show on screen ↗</Link>
+        <button className="btn btn--ghost btn--sm" disabled={pending}
+          onClick={() => confirm("Make a new check-in code? The one on your posters stops working.") && run(() => newCheckinCode(slug))}>
+          Make a new code
+        </button>
+      </div>
+      {msg && <p className="hint" role="status">{msg}</p>}
+    </div>
+  );
+}
+
+export function MemberList({ slug, me, list, checkin = true }: { slug: string; me: string; list: MemberRow[]; checkin?: boolean }) {
   const { msg, pending, run } = useAct();
   const [query, setQuery] = useState("");
-  const shown = list.filter((m) => m.name.toLowerCase().includes(query.toLowerCase())).slice(0, 200);
+  const [hereOnly, setHereOnly] = useState(false);
+  const here = list.filter((m) => m.checked_in_at).length;
+  const shown = list
+    .filter((m) => (!hereOnly || m.checked_in_at) && m.name.toLowerCase().includes(query.toLowerCase()))
+    .slice(0, 200);
   return (
     <div className="stack">
+      {checkin ? (
+        <div className="row">
+          <button className="toggle-tag" aria-pressed={hereOnly} onClick={() => setHereOnly(!hereOnly)}>Here</button>
+          <span className="hint">{hereOnly ? `${here} here` : `${list.length} joined, ${here} here`}</span>
+        </div>
+      ) : (
+        <span className="hint">{list.length} joined</span>
+      )}
       <input className="input" type="search" placeholder={`Search ${list.length} members`} value={query}
         onChange={(e) => setQuery(e.target.value)} aria-label="Search members" />
       {msg && <p className="hint" role="status">{msg}</p>}
@@ -49,7 +78,11 @@ export function MemberList({ slug, me, list }: { slug: string; me: string; list:
               <Avatar name={m.name} color={m.color} photo={m.photo_url} size={40} />
               <span style={{ minWidth: 0 }}>
                 <span className="person__name" style={{ display: "block", fontSize: "0.95rem" }}>{m.name}</span>
-                <span className="person__meta">{m.onboarded ? m.headline || "No intro yet" : "Still making their badge"}</span>
+                <span className="person__meta" style={{ display: "block" }}>{m.onboarded ? m.headline || "No intro yet" : "Still making their badge"}</span>
+                <span className="person__meta" style={{ display: "block" }}>
+                  {checkin ? (m.checked_in_at ? <>Here since <LocalTime iso={m.checked_in_at} /></> : "Not here yet") : "Joined"}
+                  {m.met > 0 && `, met ${m.met}`}
+                </span>
               </span>
             </Link>
             <div className="row member-list__actions">
@@ -95,7 +128,7 @@ export function Reports({ slug, list }: { slug: string; list: ReportRow[] }) {
       {list.map((r) => (
         <div key={r.id} className="report">
           <p>
-            <strong>{r.reporter_name}</strong> reported <Link className="link" href={`/p/${r.reported_handle}`}>{r.reported_name}</Link>
+            <strong>{r.reporter_name}</strong> reported {r.reported_handle ? <Link className="link" href={`/p/${r.reported_handle}`}>{r.reported_name}</Link> : r.reported_name}
             <span className="hint"> · {new Date(r.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</span>
           </p>
           <p className="report__reason">{r.reason}</p>

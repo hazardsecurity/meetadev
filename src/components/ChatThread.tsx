@@ -15,7 +15,10 @@ type Msg = Message & { pending?: boolean };
 const dayKey = (iso: string) => iso.slice(0, 10);
 const byTime = (a: Msg, b: Msg) => a.created_at.localeCompare(b.created_at);
 
-export function ChatThread({ me, other, firstName, initial }: { me: string; other: string; firstName: string; initial: Msg[] }) {
+/** `events`: events we were both checked in at, oldest first; a line names each one where the conversation reaches it. */
+export function ChatThread({ me, other, firstName, initial, events = [] }: {
+  me: string; other: string; firstName: string; initial: Msg[]; events?: { name: string; at: string }[];
+}) {
   const [messages, setMessages] = useState<Msg[]>(initial);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
@@ -88,6 +91,9 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
     });
   };
 
+  // Both sides are UTC ISO strings, so comparing them as text compares the times.
+  const eventAt = (iso: string) => events.filter((e) => e.at <= iso).at(-1)?.name ?? null;
+
   return (
     <div className="chat">
       <div className="card chat__push"><PushToggle compact /></div>
@@ -98,8 +104,11 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
         {messages.map((m, n) => {
           const mine = m.from_user === me;
           const newDay = n === 0 || dayKey(messages[n - 1].created_at) !== dayKey(m.created_at);
+          const event = eventAt(m.created_at);
+          const newEvent = event !== null && (n === 0 || eventAt(messages[n - 1].created_at) !== event);
           return (
             <div key={m.id}>
+              {newEvent && <p className="chat__event">{event}</p>}
               {newDay && <p className="chat__day"><LocalTime iso={m.created_at} format="day" /></p>}
               <div className={`msg ${mine ? "msg--me" : "msg--them"} ${m.pending ? "is-pending" : ""}`}>
                 <p>{m.body}</p>
@@ -117,7 +126,8 @@ export function ChatThread({ me, other, firstName, initial }: { me: string; othe
         <textarea className="textarea chat__input" rows={1} maxLength={2000} value={draft} placeholder={`Message ${firstName}`} aria-label="Message"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
-        <button className="btn chat__send" aria-label="Send" disabled={!draft.trim()}><SendHorizontal size={20} /></button>
+        {/* Keep focus in the box: on a phone, losing it brings the tab bar back and moves Send before the tap lands (BUG-025). */}
+        <button className="btn chat__send" aria-label="Send" disabled={!draft.trim()} onMouseDown={(e) => e.preventDefault()}><SendHorizontal size={20} /></button>
       </form>
       {error && <p className="error" role="alert">{error}</p>}
     </div>

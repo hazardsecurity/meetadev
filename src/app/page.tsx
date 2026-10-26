@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AyoSays } from "@/components/Ayo";
 import { HeroNetwork } from "@/components/HeroNetwork";
+import { LegalLinks } from "@/components/LegalLinks";
 import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
@@ -70,7 +71,7 @@ export default async function Home() {
               <ol className="steps__list steps__list--stack">
                 <Step n={1} color="var(--blue)" title="Pick your cities">Sign in with Google, make your badge once, and follow every city you go to events in.</Step>
                 <Step n={2} color="var(--yellow)" title="Ayo finds your people">Want a mentor? Ayo shows who&apos;s mentoring in your stack. Hiring? Ayo shows who&apos;s looking.</Step>
-                <Step n={3} color="var(--green)" title="Connect, then chat">Send a request or scan their badge. Once they accept, WhatsApp is one tap away.</Step>
+                <Step n={3} color="var(--green)" title="Match, then meet">At the venue, tap Meet on the people you want to meet. When it&apos;s mutual, chat, find each other, and both tap We met.</Step>
               </ol>
             </div>
           </div>
@@ -83,8 +84,8 @@ export default async function Home() {
               <h2 className="h1">Nobody gets your contact details unless you say yes.</h2>
               <ul className="privacy__list">
                 <li>Your WhatsApp, phone and email are only shown to people you&apos;ve connected with.</li>
-                <li>Only people at the same event can find you or send you a request.</li>
-                <li>Ignore any request you like, block or report anyone, or hide from the directory.</li>
+                <li>Only people at the same event can find you, and nobody sees who you tapped Meet on unless they tapped you too.</li>
+                <li>Block or report anyone, or hide from the directory.</li>
               </ul>
             </div>
             <AyoSays mood="wink" size={110} side="below">Your secret&apos;s safe with me.</AyoSays>
@@ -105,6 +106,7 @@ export default async function Home() {
         <p className="hint">
           Made by the community for DevFest and GDG events. Not an official Google product. Google, DevFest and GDG are trademarks of Google LLC.
         </p>
+        <LegalLinks />
       </footer>
     </>
   );

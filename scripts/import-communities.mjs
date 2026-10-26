@@ -59,7 +59,7 @@ if (!url) {
   if (args.includes("--if-configured")) { console.log("import: no DATABASE_URL, skipping"); process.exit(0); }
   console.error("DATABASE_URL is not set"); process.exit(1);
 }
-const local = /@(localhost|127\.0\.0\.1)(:|\/)/.test(url);
+const local = URL.canParse(url) && ["localhost", "127.0.0.1"].includes(new URL(url).hostname); // the real host, not "@localhost" in a password (BUG-024)
 const client = new pg.Client({ connectionString: url, ssl: url.includes("sslmode=") || local ? undefined : true });
 await client.connect();
 let added = 0, updated = 0;

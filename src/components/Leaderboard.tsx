@@ -16,7 +16,7 @@ export function Podium({ top }: { top: LeaderRow[] }) {
             <span className="podium__medal" aria-hidden>{MEDAL[Math.min(p.rank, 3) - 1]}</span>
             <Avatar name={p.name} color={p.color} photo={p.photo_url} size={i === 0 ? 72 : 56} />
             <span className="podium__name">{p.name}</span>
-            <span className="podium__score">{p.connections}</span>
+            <span className="podium__score">{p.met} met</span>
             <span className="podium__block">{p.rank}</span>
           </Link>
         );
@@ -40,7 +40,7 @@ export function LeaderList({ rows, me }: { rows: LeaderRow[]; me: string }) {
               {r.headline && <span className="person__meta">{r.headline}</span>}
             </span>
           </Link>
-          <span className="leaders__score">{r.connections} <small>{r.connections === 1 ? "connection" : "connections"}</small></span>
+          <span className="leaders__score">{r.met} <small>met</small></span>
         </li>
       ))}
     </ol>

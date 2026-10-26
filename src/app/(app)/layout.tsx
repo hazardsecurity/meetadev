@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 import { Logo } from "@/components/Logo";
 import { Nav } from "@/components/Nav";
+import { SignInLink } from "@/components/SignInLink";
 import { currentUser } from "@/lib/auth";
 import { EventSwitcher } from "@/components/EventSwitcher";
 import { InboxPulse } from "@/components/InboxPulse";
 import { eventBySlug, membership, myEvents, splitByDate, type MyEvent } from "@/lib/events";
 import { formatDate } from "@/lib/format";
 import { unreadCount } from "@/lib/chat";
-import { counts } from "@/lib/people";
 
 // Signed-in screens stay out of search; public event pages opt back in.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -18,9 +19,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const me = await currentUser();
   const member = me?.onboarded ? me : null;
-  const [incoming, unread, mine] = member
-    ? await Promise.all([counts(member.id).then((c) => c.incoming), unreadCount(member.id), myEvents(member.id)])
-    : [0, 0, []];
+  const [unread, mine] = member ? await Promise.all([unreadCount(member.id), myEvents(member.id)]) : [0, []];
 
   // The event "People" opens: the last one visited, if they're still in it.
   const lastSlug = (await cookies()).get("dfi_event")?.value ?? "";
@@ -37,16 +36,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             {member && <EventSwitcher events={switchList(mine)} currentSlug={current?.slug ?? null} />}
           </div>
           {member ? (
-            <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} />
+            <Nav unread={unread} peopleHref={peopleHref} />
           ) : me ? (
-            <Link className="btn btn--white btn--sm" href="/onboarding">Finish my badge</Link>
+            <Suspense fallback={<Link className="btn btn--white btn--sm" href="/onboarding">Finish my badge</Link>}>
+              <SignInLink to="/onboarding">Finish my badge</SignInLink>
+            </Suspense>
           ) : (
-            <Link className="btn btn--white btn--sm" href="/login">Sign in</Link>
+            <Suspense fallback={<Link className="btn btn--white btn--sm" href="/login">Sign in</Link>}>
+              <SignInLink to="/login">Sign in</SignInLink>
+            </Suspense>
           )}
         </div>
       </header>
       <main className="wrap app-main">{children}</main>
-      {member && <Nav incoming={incoming} unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
+      {member && <Nav unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
       {member && <InboxPulse />}
     </>
   );

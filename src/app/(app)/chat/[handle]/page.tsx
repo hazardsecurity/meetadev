@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { ChatThread } from "@/components/ChatThread";
+import { MetBar } from "@/components/MetBar";
 import { requireMember } from "@/lib/auth";
 import { canChat, markRead, thread } from "@/lib/chat";
 import { waLink } from "@/lib/links";
-import { profileByHandle } from "@/lib/people";
+import { eventsTogether } from "@/lib/events";
+import { meetStatus, profileByHandle } from "@/lib/people";
 
 export const metadata: Metadata = { title: "Chat" };
 
@@ -28,7 +30,7 @@ export default async function ChatPage({ params }: PageProps<"/chat/[handle]">) 
     );
   }
 
-  const messages = await thread(me.id, p.user_id);
+  const [messages, met, together] = await Promise.all([thread(me.id, p.user_id), meetStatus(me.id, p.user_id, true), eventsTogether(me.id, p.user_id)]);
   await markRead(me.id, p.user_id);
 
   return (
@@ -44,7 +46,9 @@ export default async function ChatPage({ params }: PageProps<"/chat/[handle]">) 
         </Link>
         {contact?.whatsapp && <a className="btn btn--white btn--sm" href={waLink(contact.whatsapp)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
       </header>
-      <ChatThread me={me.id} other={p.user_id} firstName={first} initial={messages} />
+      <MetBar otherId={p.user_id} firstName={first} status={met} connected />
+      <ChatThread me={me.id} other={p.user_id} firstName={first} initial={messages}
+        events={together.map((e) => ({ name: e.name, at: e.at.toISOString() }))} />
     </div>
   );
 }

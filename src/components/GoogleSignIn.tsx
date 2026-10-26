@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AyoSays, type Mood } from "./Ayo";
 
@@ -40,6 +41,11 @@ export function GoogleSignIn({ next, error, devLogin, eventName }: { next: strin
         <p className="hint">
           We only get your name, email and profile photo from Google. Your email is never shown to other attendees
           unless you add it as a contact detail.
+        </p>
+        <p className="hint">
+          By continuing you agree to the <Link className="link" href="/terms">terms</Link> and{" "}
+          <Link className="link" href="/guidelines">community guidelines</Link>, and confirm you&apos;ve read the{" "}
+          <Link className="link" href="/privacy">privacy policy</Link>.
         </p>
 
         {devLogin && (

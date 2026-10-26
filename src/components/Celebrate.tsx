@@ -15,7 +15,10 @@ const PIECES = Array.from({ length: 28 }, (_, n) => ({
   d: (n % 7) * 0.04,
 }));
 
-export function Celebrate({ first, line, cta, next }: { first: string; line: string; cta: string; next: string }) {
+/** Full-screen moment with confetti. Defaults to "your badge is ready"; `title`, `art` and `children` (extra actions) reuse it. */
+export function Celebrate({ first, line, cta, next, title, art, children }: {
+  first: string; line: string; cta?: string; next?: string; title?: string; art?: React.ReactNode; children?: React.ReactNode;
+}) {
   const still = useReducedMotion();
   return (
     <div className="celebrate">
@@ -35,14 +38,15 @@ export function Celebrate({ first, line, cta, next }: { first: string; line: str
           animate={{ scale: 1, y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 380, damping: 16 }}
         >
-          <Ayo mood="excited" size={170} />
+          {art ?? <Ayo mood="excited" size={170} />}
         </motion.div>
       </div>
       <motion.div className="stack" style={{ justifyItems: "center", textAlign: "center" }}
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
-        <h1 className="h1" style={{ color: "var(--green-shade)" }}>Your badge is ready, {first}!</h1>
+        <h1 className="h1" style={{ color: "var(--green-shade)" }}>{title ?? `Your badge is ready, ${first}!`}</h1>
         <p className="lead">{line}</p>
-        <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>{cta}</Link>
+        {next && <Link href={next} className="btn btn--green" style={{ minWidth: 220, marginTop: 8 }}>{cta}</Link>}
+        {children}
       </motion.div>
     </div>
   );
