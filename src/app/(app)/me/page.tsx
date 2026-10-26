@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { requireMember } from "@/lib/auth";
@@ -63,6 +64,14 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         </div>
 
         <div className="card"><PushToggle /></div>
+
+        <div className="card stack" style={{ "--gap": "10px" } as React.CSSProperties}>
+          <div>
+            <strong>Appearance</strong>
+            <p className="hint">Saved on this device.</p>
+          </div>
+          <ThemeSwitch />
+        </div>
 
         <div className="stats">
           <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>

@@ -116,7 +116,7 @@ export function GetStarted() {
 // Illustrations: simple shapes plus Ayo, in the festival colours.
 
 const Face = ({ initials, color, big }: { initials: string; color: string; big?: boolean }) => (
-  <span className={`art-face ${big ? "art-face--big" : ""}`} style={{ background: color, color: color === "var(--yellow)" ? "var(--ink)" : "#fff" }}>
+  <span className={`art-face ${big ? "art-face--big" : ""}`} style={{ background: color, color: color === "var(--yellow)" ? "var(--on-yellow)" : "#fff" }}>
     {initials}
   </span>
 );
