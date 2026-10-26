@@ -5,10 +5,18 @@ export type MatchProfile = { intents: string[]; stack: string[]; role: string };
 
 const has = (p: { intents: string[] }, id: string) => p.intents.includes(id);
 
+/** A role as a topic mid-sentence ("a mentor in mobile", "into AI / ML"). Roles that aren't a field of work have none. */
+function field(role: string) {
+  if (!role || ["student", "founder", "other"].includes(role)) return "";
+  const label = roleLabel(role);
+  return /^[A-Z][a-z]/.test(label) ? label[0].toLowerCase() + label.slice(1) : label;
+}
+const BOTH: Record<string, string> = { student: "You're both students.", founder: "You're both founders." };
+
 /** The strongest reason two people should meet, or null when there's none. */
 export function score(me: MatchProfile, them: MatchProfile) {
   const shared = them.stack.filter((s) => me.stack.includes(s));
-  const topic = shared[0] ?? roleLabel(them.role);
+  const topic = shared[0] ?? field(them.role);
   const reasons: [number, string][] = [];
   if (has(me, "mentor_wanted") && has(them, "mentoring"))
     reasons.push([5 + shared.length, `They mentor${topic ? ` in ${topic}` : ""}, and you're looking for a mentor.`]);
@@ -22,7 +30,10 @@ export function score(me: MatchProfile, them: MatchProfile) {
     reasons.push([3, `You're both learning ${shared[0]}.`]);
   if (shared.length >= 2) reasons.push([shared.length, `You both work with ${shared.slice(0, 2).join(" and ")}.`]);
   else if (shared.length === 1) reasons.push([1, `You both work with ${shared[0]}.`]);
-  if (me.role && me.role === them.role) reasons.push([1, `You're both into ${roleLabel(me.role).toLowerCase()}.`]);
+  if (me.role && me.role === them.role) {
+    const same = field(me.role) ? `You're both into ${field(me.role)}.` : BOTH[me.role];
+    if (same) reasons.push([1, same]);
+  }
   if (!reasons.length) return null;
   reasons.sort((a, b) => b[0] - a[0]);
   return { score: reasons.reduce((s, [n]) => s + n, 0), reason: reasons[0][1] };

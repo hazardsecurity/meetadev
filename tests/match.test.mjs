@@ -30,3 +30,17 @@ test("the boost doesn't beat a strong match", () => {
   const ranked = rank(me, [person("fan"), strong], new Set(["fan"]));
   assert.equal(ranked[0].user_id, "strong");
 });
+
+test("a role reads as a topic only when it's a field of work, in sentence case", () => {
+  const wants = (role) => score(me, person("x", { role, intents: ["mentor_wanted"] })).reason;
+  assert.equal(wants("student"), "They're looking for a mentor. You could help.");
+  assert.equal(wants("founder"), "They're looking for a mentor. You could help.");
+  assert.equal(wants("other"), "They're looking for a mentor. You could help.");
+  assert.equal(wants("mobile"), "They're looking for a mentor in mobile. You could help.");
+  assert.equal(wants("ai"), "They're looking for a mentor in AI / ML. You could help.");
+  const both = (role) => score({ ...me, intents: [], stack: [], role }, person("x", { role })).reason;
+  assert.equal(both("ai"), "You're both into AI / ML.");
+  assert.equal(both("cloud"), "You're both into cloud / DevOps.");
+  assert.equal(both("student"), "You're both students.");
+  assert.equal(score({ ...me, intents: [], stack: [], role: "other" }, person("x", { role: "other" })), null);
+});
