@@ -7,6 +7,7 @@ import { applyForOrganizer } from "@/lib/organizer-actions";
 import { CommunityPicker } from "./CommunityPicker";
 import type { CommunityLite } from "@/lib/community-kinds";
 import type { Event } from "@/lib/events";
+import { ACCENTS } from "@/lib/accents";
 
 export function EventForm({ event, communities = [] }: { event?: Event; communities?: CommunityLite[] }) {
   const action = event ? updateEvent.bind(null, event.slug) : createEvent;
@@ -28,7 +29,7 @@ export function EventForm({ event, communities = [] }: { event?: Event; communit
       <div className="field">
         <label htmlFor="name">Event name</label>
         <input id="name" name="name" className="input" required minLength={3} maxLength={80}
-          defaultValue={v?.name ?? event?.name} placeholder="DevFest Ilorin 2026" />
+          defaultValue={v?.name ?? event?.name} placeholder="Ilorin Tech Summit 2026" />
       </div>
       <div className="grid-2">
         <div className="field">
@@ -45,6 +46,20 @@ export function EventForm({ event, communities = [] }: { event?: Event; communit
         <textarea id="about" name="about" className="textarea" maxLength={400} defaultValue={v?.about ?? event?.about}
           placeholder="Shown to people when they open your invite link." />
       </div>
+      <fieldset className="field swatches">
+        <legend className="label">Event colour</legend>
+        <div className="swatches__row">
+          {ACCENTS.map((a) => (
+            <label key={a.id} className="swatch" title={a.label}>
+              <input type="radio" name="accent" value={a.id} className="sr-only"
+                defaultChecked={(v?.accent || event?.accent || "meetadev") === a.id} />
+              <span className={`swatch__dot swatch__dot--${a.id}`} style={a.id === "meetadev" ? undefined : { background: a.bg }} aria-hidden />
+              <span className="sr-only">{a.label}</span>
+            </label>
+          ))}
+        </div>
+        <span className="hint">Your event&apos;s pages, buttons and projector slide use it.</span>
+      </fieldset>
       <label className="check">
         <input type="checkbox" name="listed" defaultChecked={v ? v.listed === "on" : (event?.listed ?? true)} />
         <span>
@@ -64,9 +79,10 @@ export function JoinCodeForm() {
   return (
     <form action={formAction} className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
       <label htmlFor="join-code" className="label">Have a join code?</label>
+      <span className="hint" id="join-code-hint">Organisers show a 6-character code on the projector or in their group chat. Type it here to join that event without the link.</span>
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input id="join-code" name="code" className="input code-input" required maxLength={6} autoComplete="off"
-          autoCapitalize="characters" spellCheck={false} placeholder="ABC123" />
+          autoCapitalize="characters" spellCheck={false} placeholder="ABC123" aria-describedby="join-code-hint" />
         <button className="btn" disabled={pending}>Join</button>
       </div>
       {state.error && <p className="error" role="alert">{state.error}</p>}
@@ -84,7 +100,7 @@ export function OrganizerApplyForm({ defaultCity }: { defaultCity: string }) {
       <div className="field">
         <label htmlFor="note">Your role, or anything else? <span className="hint">(optional)</span></label>
         <textarea id="note" name="note" className="textarea" maxLength={400} defaultValue={v?.note}
-          placeholder="I'm a co-organiser of the chapter and we're planning DevFest in November." />
+          placeholder="I co-organise this community and we're planning our next meetup in November." />
       </div>
       {state.error && <p className="error" role="alert">{state.error}</p>}
       <button className="btn btn--green" disabled={pending}>{pending ? "Sending…" : "Apply"}</button>

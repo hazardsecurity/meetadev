@@ -7,7 +7,7 @@ import { currentUser } from "@/lib/auth";
 import { jsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: { absolute: `${SITE_NAME} · Meet the people you came to meet at DevFest` },
+  title: { absolute: `${SITE_NAME} · Meet the people you came to meet at tech events` },
   alternates: { canonical: "/" },
 };
 
@@ -38,17 +38,17 @@ export default async function Home() {
       <main>
         <section className="wrap hero">
           <div className="stack hero__copy" style={{ "--gap": "20px" } as React.CSSProperties}>
-            <p className="eyebrow">For DevFest &amp; GDG events</p>
+            <p className="eyebrow">For tech events and meetups</p>
             <h1 className="display">
               Meet the people <span className="hl hl--blue">you</span> came to <span className="hl hl--yellow">meet</span>.
             </h1>
             <p className="lead">
-              Find DevFest and GDG events in your cities, tell Ayo what you&apos;re looking for, and get a list of people
+              Find tech events in your cities, tell Ayo what you&apos;re looking for, and get a list of people
               worth saying hi to. Numbers are only swapped when both people say yes.
             </p>
             <div className="row">
               <Link className="btn btn--green" href={joinHref}>Find events near you</Link>
-              <Link className="btn btn--white" href={createHref}>I&apos;m a GDG organiser</Link>
+              <Link className="btn btn--white" href={createHref}>I&apos;m an event organiser</Link>
             </div>
           </div>
           <HeroNetwork />
@@ -58,9 +58,9 @@ export default async function Home() {
           <h2 className="h1" style={{ textAlign: "center" }}>How it works</h2>
           <div className="audiences">
             <div className="stack">
-              <p className="eyebrow">For GDG organisers</p>
+              <p className="eyebrow">For event organisers</p>
               <ol className="steps__list steps__list--stack">
-                <Step n={1} color="var(--blue)" title="Get approved, then create">Apply once with your chapter page. Then add an event: name, city, date. You get an invite link, QR code and join code.</Step>
+                <Step n={1} color="var(--blue)" title="Get approved, then create">Apply once with your community or event page. Then add an event: name, city, date, colour. You get an invite link, QR code and join code.</Step>
                 <Step n={2} color="var(--red)" title="Put it on screen">One click opens a full-screen join slide for the projector between sessions.</Step>
                 <Step n={3} color="var(--green)" title="Keep it friendly">See who&apos;s joined and how many connections are being made, handle reports, and add co-organisers.</Step>
               </ol>
@@ -92,10 +92,10 @@ export default async function Home() {
         </section>
 
         <section className="wrap closing">
-          <AyoSays mood="excited" size={120} side="below">See you at the next DevFest!</AyoSays>
+          <AyoSays mood="excited" size={120} side="below">See you at the next event!</AyoSays>
           <div className="row" style={{ justifyContent: "center" }}>
             <Link className="btn btn--green" href={joinHref}>Find events near you</Link>
-            <Link className="btn btn--white" href={createHref}>I&apos;m a GDG organiser</Link>
+            <Link className="btn btn--white" href={createHref}>I&apos;m an event organiser</Link>
           </div>
         </section>
       </main>
@@ -103,7 +103,7 @@ export default async function Home() {
       <footer className="wrap footer">
         <Logo />
         <p className="hint">
-          Made by the community for DevFest and GDG events. Not an official Google product. Google, DevFest and GDG are trademarks of Google LLC.
+          Made by the community for tech events and meetups. Not an official Google product.
         </p>
       </footer>
     </>

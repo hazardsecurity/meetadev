@@ -13,6 +13,7 @@ import { canCreateEvents, isAdmin } from "./organizers";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
+import { accentIds } from "./accents";
 import type { FormState } from "./actions";
 
 async function signedIn() {
@@ -40,6 +41,7 @@ const eventSchema = z.object({
     .transform((v) => v || null),
   about: z.string().trim().max(400),
   listed: z.boolean(),
+  accent: z.enum(accentIds, { message: "Pick one of the colours." }),
 });
 
 const field = (form: FormData, k: string) => String(form.get(k) ?? "");
@@ -58,6 +60,7 @@ async function communityFor(form: FormData, me: { id: string; email: string }) {
 const echo = (form: FormData) => ({
   name: field(form, "name"), city: field(form, "city"), starts_on: field(form, "starts_on"), about: field(form, "about"),
   listed: form.get("listed") === "on" ? "on" : "",
+  accent: field(form, "accent"),
   community_id: field(form, "community_id"),
 });
 
@@ -86,13 +89,14 @@ async function asMember<T>(eventId: string, userId: string, fn: (client: PoolCli
 
 export async function createEvent(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await signedIn();
-  if (!(await canCreateEvents(me))) return { error: "Only approved GDG organisers can create events. Apply on this page first." };
+  if (!(await canCreateEvents(me))) return { error: "Only approved organisers can create events. Apply on this page first." };
   const parsed = eventSchema.safeParse({
     name: field(form, "name"),
     city: field(form, "city"),
     starts_on: field(form, "starts_on"),
     about: field(form, "about"),
     listed: form.get("listed") === "on",
+    accent: field(form, "accent") || "meetadev",
   });
   if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
   if (!(await allow(`create-event:${me.id}`, 5, 86_400))) return { error: "You've created 5 events today. Try again tomorrow.", values: echo(form) };
@@ -114,9 +118,9 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
       slug = `${base}-${n}`;
     }
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO events (slug, name, city, starts_on, about, join_code, checkin_key, listed, community_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), newCheckinKey(), e.listed, communityId, me.id],
+      `INSERT INTO events (slug, name, city, starts_on, about, join_code, checkin_key, listed, community_id, created_by, accent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [slug, e.name, e.city, e.starts_on, e.about, newJoinCode(), newCheckinKey(), e.listed, communityId, me.id, e.accent],
     );
     await client.query("INSERT INTO event_members (event_id, user_id, role) VALUES ($1, $2, 'organizer')", [rows[0].id, me.id]);
     await client.query("COMMIT");
@@ -220,6 +224,7 @@ export async function updateEvent(slug: string, _prev: FormState, form: FormData
     starts_on: field(form, "starts_on"),
     about: field(form, "about"),
     listed: form.get("listed") === "on",
+    accent: field(form, "accent") || event.accent,
   });
   if (!parsed.success) return { error: firstError(parsed.error), values: echo(form) };
   const e = parsed.data;
@@ -228,8 +233,8 @@ export async function updateEvent(slug: string, _prev: FormState, form: FormData
   const chosen = field(form, "community_id");
   const community = !form.has("community_id") ? event.community_id : chosen ? ((await communityFor(form, me)) ?? event.community_id) : null;
   await query(
-    "UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, listed = $6, community_id = $7 WHERE id = $1",
-    [event.id, e.name, e.city, e.starts_on, e.about, e.listed, community],
+    "UPDATE events SET name = $2, city = $3, starts_on = $4, about = $5, listed = $6, community_id = $7, accent = $8 WHERE id = $1",
+    [event.id, e.name, e.city, e.starts_on, e.about, e.listed, community, e.accent],
   );
   revalidatePath("/", "layout");
   return { ok: "Saved." };

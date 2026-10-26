@@ -1,8 +1,8 @@
 # MeetaDev
 
-Networking for DevFest & GDG events.
+Networking for tech events and meetups.
 
-Organisers create a space for their DevFest or GDG event. Attendees join it with a link or code, check in at the venue, and swipe through the people who are there (mentors, learners, people hiring, future co-founders). When two people both tap Meet, they can chat, find each other, and both tap We met.
+Organisers create a space for their event. Attendees join it with a link or code, check in at the venue, and swipe through the people who are there (mentors, learners, people hiring, future co-founders). When two people both tap Meet, they can chat, find each other, and both tap We met.
 
 Ayo, the buddy, guides people through a 7-step, Duolingo-style onboarding, suggests matches, and reacts as you go.
 
@@ -24,10 +24,11 @@ The one number: of the matches made at an event, how many became meetings.
 
 ## For organisers
 
-- **Only approved GDG organisers can create events.** At `/events/new`, anyone else sees an application form (chapter name, their chapter's page on gdg.community.dev, city). A platform admin reviews it at `/admin`.
-- **Create an event** once approved: name, city (required), date, welcome note. The creator becomes its organiser.
+- **Only approved organisers can create events.** Any event organiser can apply: at `/events/new`, anyone else sees an application form (their community, a page that shows they run it, city). A platform admin reviews it at `/admin`.
+- **Create an event** once approved: name, city (required), date, welcome note, colour. The creator becomes its organiser.
+- **Event colour**: one of eight swatches (`src/lib/accents.ts`, each checked for text contrast). The event's pages, primary buttons, deck cards and projector slide use it; the default keeps the four meetadev colours.
 - **Show in "Find events"** (on by default): people who follow the event's city see it at `/discover`.
-- **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code. "Show on screen" opens a full-screen join slide for the projector.
+- **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code for anyone who can't scan (they type it in Events, under "Have a join code?"). "Show on screen" opens a full-screen join slide for the projector.
 - **Check-in code**: a second QR, for the venue only (posters, the welcome screen: "Show on screen" opens `/e/<slug>/screen?show=checkin`). Scanning it is what makes someone here, and only people who are here show up in the deck. "Make a new code" stops the old one working.
 - **Joining is open**: anyone signed in can join from the event page. The invite link and code are shortcuts, not a lock. "Make a new code" stops the old code working.
 - **Dashboard** at `/e/<slug>/manage`: the funnel (joined, here, swiped, matched, met), reports, members with when they checked in and how many people they've met, filterable to who's here.
@@ -36,7 +37,7 @@ The one number: of the matches made at an event, how many became meetings.
 
 ## Communities
 
-- **Communities** (GDG chapters, GDG on Campus / student clubs, Women Techmakers, other developer communities) each have a public page at `/c/<slug>` with their upcoming events, listed in the sitemap.
+- **Communities** (developer communities and meetups, GDG chapters, GDG on Campus / student clubs, Women Techmakers) each have a public page at `/c/<slug>` with their upcoming events, listed in the sitemap.
 - **Organisers** search the list when applying and pick their community. If it isn't listed they add it (GDG chapters must link to their gdg.community.dev page); it goes live when an admin approves the application.
 - **Events** can be linked to a community the organiser runs, and show "Hosted by …".
 - **Attendees** see "Communities in your cities" on Find events.
@@ -53,10 +54,12 @@ The one number: of the matches made at an event, how many became meetings.
 - **Follow cities**: during onboarding and on `/discover`, add every city you go to events in. "Find events" lists upcoming listed events in all of them. Anyone can search `/discover?city=Lagos` without signing in.
 - **One badge for every event**: role, level, what you're here for, stack, intro, private contact, public links.
 - **Events**: join with an invite link or a code; switch between events from the top bar. The deck, directory and suggestions are limited to people at the same event.
-- **Deck**: once checked in, the event opens on a deck of the people who are here, best match first, each with the reason. Meet, Pass (hidden for this event only), Undo; drag, tap, or use the arrow keys. People who already want to meet you rank a little higher, and nothing says so.
+- **Deck**: once checked in, the event opens on a deck of the people who are here, best match first, each with the reason. Meet, Pass (hidden for this event only), Undo; drag, tap, or use the arrow keys. People who already want to meet you rank a little higher, and nothing says so. The first time, a guide over the first card shows what each swipe does.
 - **"People you should meet"**: matches mentors with people who want a mentor, hiring with job hunting, co-founder with co-founder, shared stack, and so on. Every suggestion says why.
 - **Directory** with search and filters (role, level, intent, stack) plus quick filters.
-- **Meet** (deck or directory) is private until it's mutual: no requests, no notes, no declines. A match notifies the other person and opens chat.
+- **Meet** (deck or directory) is private until it's mutual: no requests, no notes, no declines. A match notifies the other person (the phone vibrates on Android) and opens chat.
+- **Share my contact** in a chat posts a contact card: WhatsApp, phone, email and links, with WhatsApp, Call and Save contact buttons. With no number on the badge, it asks for one and saves it there.
+- **App and notifications**: meetadev installs as an app (Install on Android and desktop Chrome, Share → Add to Home Screen on iPhone). Each visit, until it's installed and notifications are on, a sheet offers both; "Don't ask again" stops it on that device. Both are also on My badge.
 - **We met**: in the chat, or on a profile after scanning someone's badge. It counts once both tap it, and the leaderboard ranks people met in person.
 - **Your people here**: when you check in, connections who are already here get a ping, and the deck shows who's here. Never between events.
 - **Delete my account**: on My badge, after typing DELETE. Removes the badge, contacts, connections, chats and notifications; meetings already confirmed still count for the other person, without the deleted name. Bans, blocks and reports stay, tied only to a SHA-256 hash of the Google ID, and apply again if that Google account signs in later.
@@ -100,10 +103,10 @@ Next.js 16 (App Router, Server Actions, `proxy.ts`), Postgres via `pg`, zod, Mot
 
 ## Not built yet
 
-- Event logos or custom colours (every event uses the Google colours).
+- Event logos.
 - Deleting an event (organisers can leave, but the event stays).
 - Email notifications (e.g. telling an organiser they were approved). They see it next time they open "Create an event".
 - A fixed list of cities. Cities are free text, tidied ("lagos " becomes "Lagos") and matched case-insensitively, with suggestions from cities that already have events.
 - Uploading a different profile photo (the Google photo is used, otherwise coloured initials).
 
-Not an official Google product. Google and DevFest are trademarks of Google LLC.
+Not an official Google product.

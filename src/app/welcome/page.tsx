@@ -13,7 +13,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
   const event = slug ? await eventBySlug(slug) : null;
   const first = me.name.split(" ")[0];
 
-  // Organisers came here from "I'm a GDG organiser": send them on to the
+  // Organisers came here from "I'm an event organiser": send them on to the
   // organiser application / create page, not the attendee pages.
   if (next.startsWith("/events/new"))
     return <Celebrate first={first} line="Now let's set you up as an organiser." cta="Continue to organiser setup" next={next} />;

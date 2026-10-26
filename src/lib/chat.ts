@@ -1,7 +1,9 @@
 import "server-only";
 import { query } from "./db";
 
-export type Message = { id: string; from_user: string; body: string; created_at: string; delivered_at: string | null; read_at: string | null };
+// kind "contact": body is a SharedContact as JSON, written only by shareContact.
+export type Message = { id: string; from_user: string; kind: string; body: string; created_at: string; delivered_at: string | null; read_at: string | null };
+export type SharedContact = { name: string; whatsapp: string; phone: string; email: string; links: { label: string; href: string }[] };
 export type Receipt = { id: string; delivered_at: string | null; read_at: string | null };
 
 export const iso = (col: string) => `to_char(${col} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
@@ -25,7 +27,7 @@ export async function thread(me: string, other: string, after?: string) {
   let since = "";
   if (after) { params.push(after); since = "AND created_at > $3"; }
   const rows = await query<Message>(
-    `SELECT id, from_user, body, ${iso("created_at")} AS created_at,
+    `SELECT id, from_user, kind, body, ${iso("created_at")} AS created_at,
             ${iso("delivered_at")} AS delivered_at, ${iso("read_at")} AS read_at
        FROM messages
       WHERE ${PAIR} ${since}
@@ -67,7 +69,7 @@ export type ChatSummary = { other: string; last_body: string; last_at: Date; las
 /** Latest message and unread count per person, for the chats list. */
 export async function summaries(me: string) {
   return query<ChatSummary>(
-    `SELECT DISTINCT ON (other) other, body AS last_body, created_at AS last_at, from_user = $1 AS last_from_me,
+    `SELECT DISTINCT ON (other) other, CASE WHEN kind = 'contact' THEN 'Contact card' ELSE body END AS last_body, created_at AS last_at, from_user = $1 AS last_from_me,
             delivered_at IS NOT NULL AS last_delivered, read_at IS NOT NULL AS last_read,
             (SELECT count(*)::int FROM messages u WHERE u.to_user = $1 AND u.from_user = other AND u.read_at IS NULL) AS unread
        FROM (SELECT *, CASE WHEN from_user = $1 THEN to_user ELSE from_user END AS other

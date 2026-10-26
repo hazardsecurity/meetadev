@@ -67,7 +67,7 @@ export default async function CommunityPage({ params }: PageProps<"/c/[slug]">) 
             </Link>
           ))
         ) : (
-          <AyoSays mood="thinking" size={84}>{`No upcoming events from ${c.name} on meetadev yet. Check back closer to their next meetup or DevFest.`}</AyoSays>
+          <AyoSays mood="thinking" size={84}>{`No upcoming events from ${c.name} on meetadev yet. Check back closer to their next meetup.`}</AyoSays>
         )}
       </section>
     </div>

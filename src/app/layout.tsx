@@ -3,6 +3,7 @@ import { Google_Sans, Google_Sans_Code } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { themeBootScript } from "@/lib/theme";
+import { pwaBootScript } from "@/lib/pwa";
 import "./globals.css";
 
 const sans = Google_Sans({ variable: "--font-google-sans", subsets: ["latin"] });
@@ -31,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // suppressHydrationWarning: the boot script may set data-theme before React hydrates.
     <html lang="en" className={`${sans.variable} ${code.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript + pwaBootScript }} />
       </head>
       <body>
         {children}

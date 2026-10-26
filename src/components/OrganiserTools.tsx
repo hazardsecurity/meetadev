@@ -28,6 +28,7 @@ export function CodeTools({ slug, code }: { slug: string; code: string }) {
     <div className="stack" style={{ justifyItems: "center", "--gap": "8px" } as React.CSSProperties}>
       <span className="eyebrow">Join code</span>
       <strong className="join-code">{code}</strong>
+      <p className="hint" style={{ textAlign: "center", maxWidth: "34ch" }}>For anyone who can&apos;t scan the QR: they type it in Events, under “Have a join code?”</p>
       <button className="btn btn--ghost btn--sm" disabled={pending} onClick={() => run(() => newCode(slug))}>Make a new code</button>
       {msg && <p className="hint" role="status">{msg}</p>}
     </div>

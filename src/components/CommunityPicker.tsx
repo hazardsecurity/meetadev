@@ -34,11 +34,11 @@ export function CommunityPicker({ defaultCity, values }: { defaultCity: string; 
         </div>
         <div className="field">
           <label htmlFor="c_name">Community name</label>
-          <input id="c_name" name="c_name" className="input" required minLength={3} maxLength={80} placeholder="GDG Ilorin" defaultValue={values?.c_name ?? q} />
+          <input id="c_name" name="c_name" className="input" required minLength={3} maxLength={80} placeholder="Ilorin Devs" defaultValue={values?.c_name ?? q} />
         </div>
         <div className="field">
           <label htmlFor="c_kind">Type</label>
-          <select id="c_kind" name="c_kind" className="select" defaultValue={values?.c_kind ?? "gdg"}>
+          <select id="c_kind" name="c_kind" className="select" defaultValue={values?.c_kind ?? "other"}>
             {KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
           </select>
         </div>
@@ -55,8 +55,8 @@ export function CommunityPicker({ defaultCity, values }: { defaultCity: string; 
         <div className="field">
           <label htmlFor="c_url">Community page</label>
           <input id="c_url" name="c_url" type="url" className="input" required maxLength={200} defaultValue={values?.c_url ?? ""}
-            placeholder="https://gdg.community.dev/gdg-ilorin/" />
-          <span className="hint">For GDG chapters, the page on gdg.community.dev where you&apos;re listed as an organiser.</span>
+            placeholder="https://ilorindevs.com" />
+          <span className="hint">A page that shows you run it: your community&apos;s site, meetup page or social profile.</span>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export function CommunityPicker({ defaultCity, values }: { defaultCity: string; 
           <div className="search-input">
             <Search size={18} aria-hidden />
             <input className="input" value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value.trim().length < 2) { setResults([]); setSearched(false); } }}
-              placeholder="Search by name or city, e.g. GDG Ilorin" aria-label="Search communities" autoComplete="off" />
+              placeholder="Search by name or city" aria-label="Search communities" autoComplete="off" />
           </div>
           {results.length > 0 && (
             <ul className="community-results">

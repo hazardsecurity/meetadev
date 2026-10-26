@@ -6,6 +6,7 @@ import { BadgeQR } from "@/components/BadgeQR";
 import { DeleteAccount } from "@/components/DeleteAccount";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
+import { InstallRow } from "@/components/AppPrompt";
 import { IntentChips, roleLine } from "@/components/Chips";
 import { requireMember } from "@/lib/auth";
 import { counts, profileOf } from "@/lib/people";
@@ -65,6 +66,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         </div>
 
         <div className="card"><PushToggle /></div>
+        <InstallRow />
 
         <div className="card stack" style={{ "--gap": "10px" } as React.CSSProperties}>
           <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Undo2, UserPlus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Undo2, UserPlus, X } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import type { DeckCard } from "@/lib/people";
 import { AyoSays } from "./Ayo";
 import { Avatar } from "./Avatar";
 import { Celebrate } from "./Celebrate";
+import { useHydrated } from "./LocalTime";
 import { IntentChips, roleLine } from "./Chips";
 import { SafetyMenu } from "./SafetyMenu";
 
@@ -18,6 +19,8 @@ type Result = { error?: string; ok?: string };
 const firstName = (name: string) => name.split(" ")[0];
 // A card must be on screen this long before a choice counts (the second tap of a double tap lands on the next card).
 const SETTLE_MS = 350;
+const COACHED = "mad-deck-coached";
+const wasCoached = () => { try { return !!localStorage.getItem(COACHED); } catch { return false; } };
 
 /** People who are here, one at a time. Meet stays private until it's mutual; Pass hides them at this event. */
 export function SwipeDeck({ slug, cards, me, waiting }: {
@@ -38,8 +41,18 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
   // When a choice, Undo or "Keep going" last brought up a new card. The first card on load isn't guarded.
   const shownAt = useRef(0);
 
+  // First visit: show how swiping works on top of the first card, and hold choices until "Got it".
+  const hydrated = useHydrated();
+  const [coached, setCoached] = useState(false);
+  const coach = hydrated && !coached && !wasCoached();
+  const endCoach = () => {
+    try { localStorage.setItem(COACHED, "1"); } catch { /* private mode: shown again next visit */ }
+    shownAt.current = performance.now();
+    setCoached(true);
+  };
+
   const choose = (choice: Choice) => {
-    if (!card || match || performance.now() - shownAt.current < SETTLE_MS) return;
+    if (!card || match || coach || performance.now() - shownAt.current < SETTLE_MS) return;
     const c = card;
     shownAt.current = performance.now();
     setI((n) => n + 1);
@@ -57,6 +70,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
         setNote("");
         setDone((d) => d.filter((x) => x !== c)); // a match isn't undone from the deck
         setMatch(c);
+        navigator.vibrate?.([180, 80, 180]);
       }
     });
   };
@@ -87,7 +101,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
 
   if (match)
     return (
-      <div className="deck-match">
+      <div className="deck-match" data-hold-prompt>
         <Celebrate first={firstName(me.name)} title="It's a match" cta="Say hi" next={`/chat/${match.handle}`}
           line={`You and ${firstName(match.name)} both want to meet. Say hi and find each other.`}
           art={
@@ -120,31 +134,41 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
     <div className="deck-wrap">
       <div className="deck">
         {cards[i + 1] && <div className="dcard dcard--peek" aria-hidden />}
-        <Card key={card.user_id} card={card} onSwipe={choose} />
+        <Card key={card.user_id} card={card} onSwipe={choose} locked={coach} />
+        {coach && (
+          <div className="coach" data-hold-prompt role="dialog" aria-label="How the deck works">
+            <p className="coach__zone"><ArrowLeft size={28} aria-hidden /><strong>Swipe left to pass</strong><small>They never know.</small></p>
+            <p className="coach__zone"><ArrowRight size={28} aria-hidden /><strong>Swipe right to meet</strong><small>They only find out if they want to meet you too.</small></p>
+            <button className="btn btn--white coach__ok" onClick={endCoach} autoFocus>Got it</button>
+          </div>
+        )}
       </div>
       {note && <p className="deck__note" role="status">{note}</p>}
       <div className="deck__actions">
-        <button className="round" onClick={undo} disabled={!done.length} aria-label="Undo">
+        <button className="round" onClick={undo} disabled={!done.length || coach} aria-label="Undo">
           <Undo2 size={20} strokeWidth={2.4} />
         </button>
-        <button className="btn btn--white" onClick={() => choose("pass")}><X size={20} strokeWidth={2.4} />Pass</button>
-        <button className="btn btn--green" onClick={() => choose("meet")}><UserPlus size={20} strokeWidth={2.4} />Meet</button>
+        <button className="btn btn--white" onClick={() => choose("pass")} disabled={coach}><X size={20} strokeWidth={2.4} />Pass</button>
+        <button className="btn btn--green" onClick={() => choose("meet")} disabled={coach}><UserPlus size={20} strokeWidth={2.4} />Meet</button>
       </div>
       <p className="hint deck__keys">On a keyboard: ← Pass, → Meet</p>
     </div>
   );
 }
 
-function Card({ card, onSwipe }: { card: DeckCard; onSwipe: (c: Choice) => void }) {
+function Card({ card, onSwipe, locked }: { card: DeckCard; onSwipe: (c: Choice) => void; locked: boolean }) {
   const still = useReducedMotion();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-240, 240], [-10, 10]);
+  // The MEET / PASS stamps fade in as the card is dragged toward a choice.
+  const meet = useTransform(x, [20, 110], [0, 1]);
+  const pass = useTransform(x, [-110, -20], [1, 0]);
   return (
     <motion.article
       className="dcard"
       aria-label={card.name}
       style={{ x, rotate }}
-      drag={still ? false : "x"}
+      drag={still || locked ? false : "x"}
       dragSnapToOrigin
       onDragEnd={(_, info) => {
         if (info.offset.x > 110) onSwipe("meet");
@@ -154,6 +178,8 @@ function Card({ card, onSwipe }: { card: DeckCard; onSwipe: (c: Choice) => void 
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
+      <motion.span className="stamp stamp--meet" style={{ opacity: meet }} aria-hidden>Meet</motion.span>
+      <motion.span className="stamp stamp--pass" style={{ opacity: pass }} aria-hidden>Pass</motion.span>
       <div className="dcard__top">
         <Avatar name={card.name} color={card.color} photo={card.photo_url} size={120} />
         <span className="chip chip--green dcard__here"><span className="live" aria-hidden />Here</span>

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { markSvg } from "@/lib/brand";
 
-export const alt = "meetadev: meet the people you came to meet at DevFest and GDG events";
+export const alt = "meetadev: meet the people you came to meet at tech events";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -17,7 +17,7 @@ export default function OpengraphImage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div style={{ fontSize: 112, fontWeight: 700, letterSpacing: -5, color: "#202124", lineHeight: 1 }}>meetadev</div>
             <div style={{ fontSize: 40, color: "#5f6368", lineHeight: 1.25, maxWidth: 760 }}>
-              Meet the people you came to meet at DevFest and GDG events.
+              Meet the people you came to meet at tech events.
             </div>
           </div>
         </div>

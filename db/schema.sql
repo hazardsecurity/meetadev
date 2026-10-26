@@ -272,3 +272,9 @@ BEGIN
     INSERT INTO seed_runs (key) VALUES ('declines-become-wants');
   END IF;
 END $$;
+
+-- The organiser's colour for their event's buttons and stripe; ids in src/lib/accents.ts.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS accent text NOT NULL DEFAULT 'meetadev';
+
+-- A message is text, or a contact card (body is the JSON snapshot of what was shared).
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'text';
