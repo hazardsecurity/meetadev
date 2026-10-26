@@ -1,4 +1,5 @@
 import "server-only";
+import { POSTHOG_KEY, POSTHOG_REGION } from "./analytics-config";
 import { notFound } from "next/navigation";
 import { requireMember } from "./auth";
 import { query } from "./db";
@@ -217,7 +218,7 @@ export function configStatus() {
     { name: "Push notifications", key: "NEXT_PUBLIC_VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY", ok: set("NEXT_PUBLIC_VAPID_PUBLIC_KEY") && set("VAPID_PRIVATE_KEY") },
     { name: "Admins", key: "ADMIN_EMAILS", ok: set("ADMIN_EMAILS"), note: `${(process.env.ADMIN_EMAILS ?? "").split(",").filter((e) => e.trim()).length} listed` },
     { name: "Site address", key: "APP_URL", ok: set("APP_URL") },
-    { name: "Analytics (PostHog)", key: "NEXT_PUBLIC_POSTHOG_KEY", ok: true, note: set("NEXT_PUBLIC_POSTHOG_KEY") ? `On, ${process.env.NEXT_PUBLIC_POSTHOG_REGION === "eu" ? "EU" : "US"} region` : "Off: no key set" },
+    { name: "Analytics (PostHog)", key: "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", ok: true, note: POSTHOG_KEY ? `On, ${POSTHOG_REGION.toUpperCase()} region` : "Off: no token set" },
     { name: "Venue check-in", key: "CHECKIN_REQUIRED", ok: true, note: process.env.CHECKIN_REQUIRED === "1" ? "On: people scan a code at the venue" : "Off: joining is enough" },
   ];
 }
