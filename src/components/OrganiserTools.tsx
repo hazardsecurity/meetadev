@@ -51,7 +51,7 @@ export function CheckinTools({ slug }: { slug: string }) {
   );
 }
 
-export function MemberList({ slug, me, list }: { slug: string; me: string; list: MemberRow[] }) {
+export function MemberList({ slug, me, list, checkin = true }: { slug: string; me: string; list: MemberRow[]; checkin?: boolean }) {
   const { msg, pending, run } = useAct();
   const [query, setQuery] = useState("");
   const [hereOnly, setHereOnly] = useState(false);
@@ -61,10 +61,14 @@ export function MemberList({ slug, me, list }: { slug: string; me: string; list:
     .slice(0, 200);
   return (
     <div className="stack">
-      <div className="row">
-        <button className="toggle-tag" aria-pressed={hereOnly} onClick={() => setHereOnly(!hereOnly)}>Here</button>
-        <span className="hint">{hereOnly ? `${here} here` : `${list.length} joined, ${here} here`}</span>
-      </div>
+      {checkin ? (
+        <div className="row">
+          <button className="toggle-tag" aria-pressed={hereOnly} onClick={() => setHereOnly(!hereOnly)}>Here</button>
+          <span className="hint">{hereOnly ? `${here} here` : `${list.length} joined, ${here} here`}</span>
+        </div>
+      ) : (
+        <span className="hint">{list.length} joined</span>
+      )}
       <input className="input" type="search" placeholder={`Search ${list.length} members`} value={query}
         onChange={(e) => setQuery(e.target.value)} aria-label="Search members" />
       {msg && <p className="hint" role="status">{msg}</p>}
@@ -77,7 +81,7 @@ export function MemberList({ slug, me, list }: { slug: string; me: string; list:
                 <span className="person__name" style={{ display: "block", fontSize: "0.95rem" }}>{m.name}</span>
                 <span className="person__meta" style={{ display: "block" }}>{m.onboarded ? m.headline || "No intro yet" : "Still making their badge"}</span>
                 <span className="person__meta" style={{ display: "block" }}>
-                  {m.checked_in_at ? <>Here since <LocalTime iso={m.checked_in_at} /></> : "Not here yet"}
+                  {checkin ? (m.checked_in_at ? <>Here since <LocalTime iso={m.checked_in_at} /></> : "Not here yet") : "Joined"}
                   {m.met > 0 && `, met ${m.met}`}
                 </span>
               </span>

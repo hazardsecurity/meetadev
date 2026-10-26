@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteAccount } from "@/lib/actions";
+import { resetAnalytics } from "@/lib/analytics-client";
 
 /** Delete my account, after typing DELETE. Mirrors "Delete this event" on Manage. */
 export function DeleteAccount() {
@@ -20,7 +21,7 @@ export function DeleteAccount() {
     <form className="card stack" style={{ "--gap": "10px" } as React.CSSProperties}
       onSubmit={(e) => {
         e.preventDefault();
-        if (matches) start(async () => { const res = await deleteAccount(typed); if (res?.error) setError(res.error); });
+        if (matches) start(async () => { resetAnalytics(); const res = await deleteAccount(typed); if (res?.error) setError(res.error); });
       }}>
       <p>
         This deletes your badge, contacts, connections, chats and notifications. Meetings you confirmed still count

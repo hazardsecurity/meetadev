@@ -8,10 +8,12 @@ import { tidyCities, tidyCity } from "./cities";
 import { query } from "./db";
 import { importCommunities, slugifyCommunity } from "./communities";
 import { kindIds, type Kind } from "./community-kinds";
+import { logAdmin } from "./admin";
 import { isAdmin } from "./organizers";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
 import { firstError } from "./validation";
+import { track } from "./analytics";
 
 const isGdgPage = (v: string) => /^https:\/\/gdg\.community\.dev\/./i.test(v);
 
@@ -68,6 +70,7 @@ export async function applyForOrganizer(_prev: FormState, form: FormData): Promi
     "INSERT INTO organizer_requests (user_id, chapter_name, chapter_url, city, note, community_id) VALUES ($1, $2, $3, $4, $5, $6)",
     [me.id, community.name, community.url, community.city, note, community.id],
   );
+  await track(me.id, "organiser applied");
   revalidatePath("/events/new");
   return { ok: "sent" };
 }
@@ -103,22 +106,26 @@ export async function reviewRequest(requestId: string, approve: boolean): Promis
       [request.community_id, requestId],
     );
   }
-  revalidatePath("/admin");
+  const who = (await query<{ email: string }>("SELECT email FROM users WHERE id = $1", [rows[0].user_id]))[0]?.email ?? rows[0].user_id;
+  await logAdmin(me, approve ? "approve-organiser" : "decline-organiser", who);
+  revalidatePath("/admin", "layout");
   return { ok: approve ? "Approved. They can create events now." : "Declined." };
 }
 
 export async function revokeOrganizer(userId: string): Promise<FormState> {
-  await admin();
-  await query("UPDATE users SET can_create_events = false WHERE id = $1", [userId]);
-  revalidatePath("/admin");
+  const me = await admin();
+  const rows = await query<{ email: string }>("UPDATE users SET can_create_events = false WHERE id = $1 RETURNING email", [userId]);
+  await logAdmin(me, "revoke-organiser", rows[0]?.email ?? userId);
+  revalidatePath("/admin", "layout");
   return { ok: "They can no longer create new events. Their existing events stay." };
 }
 
 export async function grantOrganizer(_prev: FormState, form: FormData): Promise<FormState> {
-  await admin();
+  const me = await admin();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const rows = await query("UPDATE users SET can_create_events = true WHERE lower(email) = $1 RETURNING id", [email]);
-  revalidatePath("/admin");
+  if (rows.length) await logAdmin(me, "grant-organiser", email);
+  revalidatePath("/admin", "layout");
   return rows.length ? { ok: `${email} can create events now.` } : { error: "Nobody with that email has signed in to meetadev yet." };
 }
 
@@ -175,7 +182,8 @@ export async function importCommunityList(_prev: FormState, form: FormData): Pro
   });
   if (!rows.length) return { error: "None of those lines could be read. Use: name, type, city, country, link", values: { csv: text } };
   const { added, updated } = await importCommunities(rows, me.id);
-  revalidatePath("/admin");
+  await logAdmin(me, "import-communities", "", `added ${added}, updated ${updated}`);
+  revalidatePath("/admin", "layout");
   const skipped = bad.length ? ` Skipped line${bad.length === 1 ? "" : "s"} ${bad.slice(0, 15).join(", ")}${bad.length > 15 ? "…" : ""}.` : "";
   return { ok: `Added ${added}, updated ${updated}.${skipped}` };
 }

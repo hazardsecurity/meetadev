@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AyoSays } from "@/components/Ayo";
 import { HeroNetwork } from "@/components/HeroNetwork";
+import { LegalLinks } from "@/components/LegalLinks";
 import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
@@ -105,6 +106,7 @@ export default async function Home() {
         <p className="hint">
           Made by the community for tech events and meetups. Not an official Google product.
         </p>
+        <LegalLinks />
       </footer>
     </>
   );

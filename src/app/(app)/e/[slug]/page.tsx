@@ -11,7 +11,7 @@ import { PersonCard } from "@/components/PersonCard";
 import { SwipeDeck } from "@/components/SwipeDeck";
 import { currentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { eventBySlug, hereCount, isBanned, isHere, memberCount, membership, type Event } from "@/lib/events";
+import { CHECKIN_REQUIRED, eventBySlug, hereCount, isBanned, isHere, memberCount, membership, type Event } from "@/lib/events";
 import { isAdmin } from "@/lib/organizers";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import { connectionsHere, deck, directory, profileOf, suggestions, type PublicProfile } from "@/lib/people";
@@ -135,12 +135,12 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
             {views}
             {(here || organiser) && (
               <div className="row" style={{ justifyContent: "space-between" }}>
-                {here && <span className="chip chip--green"><span className="live" aria-hidden />You&apos;re here</span>}
+                {here && CHECKIN_REQUIRED && <span className="chip chip--green"><span className="live" aria-hidden />You&apos;re here</span>}
                 {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
               </div>
             )}
           </div>
-          {sp.joined && <p className="card card--green success">You&apos;re in! Check in at the venue and the deck fills with people who are there.</p>}
+          {sp.joined && <p className="card card--green success">{CHECKIN_REQUIRED ? <>You&apos;re in! Check in at the venue and the deck fills with people who are there.</> : <>You&apos;re in! Swipe through the people at {event.name} and tap Meet on the ones you&apos;d like to meet.</>}</p>}
           {sp.blocked && <p className="card card--green">Blocked. You won&apos;t see each other any more.</p>}
         </>
       ) : (
@@ -152,7 +152,7 @@ async function Directory({ event, community, viewerId, viewerName, organiser, sp
               {organiser && <Link className="btn btn--white btn--sm" href={`${base}/manage`}>Organiser tools</Link>}
             </div>
           </div>
-          {sp.joined && <p className="card card--green success">You&apos;re in! Check in at the venue and the deck fills with people who are there.</p>}
+          {sp.joined && <p className="card card--green success">{CHECKIN_REQUIRED ? <>You&apos;re in! Check in at the venue and the deck fills with people who are there.</> : <>You&apos;re in! Swipe through the people at {event.name} and tap Meet on the ones you&apos;d like to meet.</>}</p>}
           {sp.blocked && <p className="card card--green">Blocked. You won&apos;t see each other any more.</p>}
           {views}
         </>
@@ -214,11 +214,11 @@ async function DeckView({ event, profile, joined, here }: { event: Event; profil
           <span className="faces" aria-hidden>
             {friends.slice(0, 3).map((f) => <Avatar key={f.user_id} name={f.name} color={f.color} photo={f.photo_url} size={32} />)}
           </span>
-          <span><b>{names(friends)}</b> {friends.length === 1 ? "is" : "are"} here too</span>
+          <span><b>{names(friends)}</b> {friends.length === 1 ? "is" : "are"} {CHECKIN_REQUIRED ? "here" : "going"} too</span>
           <span className="strip__go">Chat</span>
         </Link>
       )}
-      <SwipeDeck slug={event.slug} cards={cards} me={{ name: profile.name, color: profile.color, photo_url: profile.photo_url }} waiting={joined - hereNow} />
+      <SwipeDeck slug={event.slug} cards={cards} me={{ name: profile.name, color: profile.color, photo_url: profile.photo_url }} waiting={joined - hereNow} checkin={CHECKIN_REQUIRED} />
     </section>
   );
 }

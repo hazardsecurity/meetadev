@@ -45,9 +45,16 @@ export const membership = cache(async (eventId: string, userId: string) => {
 
 const LAGOS_TODAY = "(now() AT TIME ZONE 'Africa/Lagos')::date";
 
+/** Off for now: joining an event is enough to be in its deck. Set CHECKIN_REQUIRED=1 to bring back
+ *  "scan the venue's check-in code on the day" (the code, its QR and the /checkin page all return). */
+export const CHECKIN_REQUIRED = process.env.CHECKIN_REQUIRED === "1";
+
+/** When someone counts as having been at the event: their check-in, or (open joining) when they joined. */
+export const HERE_AT = (m = "m") => (CHECKIN_REQUIRED ? `${m}.checked_in_at` : `coalesce(${m}.checked_in_at, ${m}.joined_at)`);
+
 /** Here, as SQL for an event_members row "m": checked in today (Lagos), and today is the event's date when it
  *  has one. Being here ends with the day (D-005); checked_in_at itself is kept as history. */
-export const HERE = (m = "m") =>
+export const HERE = (m = "m") => !CHECKIN_REQUIRED ? "TRUE" :
   `${m}.checked_in_at >= (date_trunc('day', now() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
    AND coalesce((SELECT starts_on FROM events WHERE id = ${m}.event_id), ${LAGOS_TODAY}) = ${LAGOS_TODAY}`;
 
@@ -108,9 +115,9 @@ export async function allEvents() {
 /** Events two people were both Here at, in the order they were there together. */
 export async function eventsTogether(a: string, b: string) {
   return query<{ id: string; slug: string; name: string; at: Date }>(
-    `SELECT e.id, e.slug, e.name, greatest(x.checked_in_at, y.checked_in_at) AS at
+    `SELECT e.id, e.slug, e.name, greatest(${HERE_AT("x")}, ${HERE_AT("y")}) AS at
        FROM event_members x JOIN event_members y ON y.event_id = x.event_id JOIN events e ON e.id = x.event_id
-      WHERE x.user_id = $1 AND y.user_id = $2 AND x.checked_in_at IS NOT NULL AND y.checked_in_at IS NOT NULL
+      WHERE x.user_id = $1 AND y.user_id = $2 AND ${HERE_AT("x")} IS NOT NULL AND ${HERE_AT("y")} IS NOT NULL
       ORDER BY at`,
     [a, b],
   );
@@ -122,7 +129,7 @@ export async function hereTogether(a: string, b: string) {
     `SELECT e.id, e.slug, e.name
        FROM event_members x JOIN event_members y ON y.event_id = x.event_id JOIN events e ON e.id = x.event_id
       WHERE x.user_id = $1 AND y.user_id = $2 AND ${HERE("x")} AND ${HERE("y")}
-      ORDER BY greatest(x.checked_in_at, y.checked_in_at) DESC LIMIT 1`,
+      ORDER BY greatest(${HERE_AT("x")}, ${HERE_AT("y")}) DESC LIMIT 1`,
     [a, b],
   );
   return rows[0] ?? null;
@@ -174,7 +181,7 @@ export async function eventStats(eventId: string) {
   const rows = await query<{ joined: number; here: number; swiped: number; matched: number; met: number; matches: number; meetings: number }>(
     `SELECT
        (SELECT count(*)::int FROM event_members WHERE event_id = $1) AS joined,
-       (SELECT count(*)::int FROM event_members WHERE event_id = $1 AND checked_in_at IS NOT NULL) AS here,
+       (SELECT count(*)::int FROM event_members m WHERE m.event_id = $1 AND ${HERE_AT()} IS NOT NULL) AS here,
        -- Whoever made a want mutual chose Meet too, but has no row of their own: count them via to_user.
        (SELECT count(*)::int FROM (SELECT from_user FROM passes WHERE event_id = $1
                                     UNION SELECT from_user FROM connection_requests WHERE event_id = $1

@@ -7,11 +7,12 @@ import { currentUser } from "./auth";
 import type { PoolClient } from "pg";
 import { pool, query } from "./db";
 import { tidyCity } from "./cities";
-import { eventBySlug, HERE, isBanned, lagosToday, membership, newCheckinKey, newJoinCode, slugifyEvent } from "./events";
+import { CHECKIN_REQUIRED, eventBySlug, HERE, isBanned, lagosToday, membership, newCheckinKey, newJoinCode, slugifyEvent } from "./events";
 import { formatDate } from "./format";
 import { canCreateEvents, isAdmin } from "./organizers";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 import { firstError } from "./validation";
 import { accentIds } from "./accents";
 import type { FormState } from "./actions";
@@ -130,6 +131,7 @@ export async function createEvent(_prev: FormState, form: FormData): Promise<For
   } finally {
     client.release();
   }
+  await track(me.id, "event created");
   revalidatePath("/", "layout");
   redirect(`/e/${slug}/manage?created=1`);
 }
@@ -141,8 +143,10 @@ export async function joinEvent(slug: string): Promise<FormState> {
   if (!event) return { error: "That event doesn't exist any more." };
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
   if (!(await allow(`join:${me.id}`, 30, 3600))) return { error: "Slow down a little and try again in a few minutes." };
+  const wasMember = Boolean(await membership(event.id, me.id));
   await asMember(event.id, me.id, (c) => c.query(`INSERT INTO event_members (event_id, user_id) SELECT $1, $2 WHERE ${NOT_BANNED} ON CONFLICT DO NOTHING`, [event.id, me.id]));
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
+  if (!wasMember) await track(me.id, "event joined", { event_id: event.id });
   revalidatePath("/", "layout");
   redirect(`/e/${slug}?joined=1`);
 }
@@ -167,6 +171,7 @@ export async function checkIn(slug: string, key: string): Promise<FormState> {
   const event = await eventBySlug(slug);
   if (!event) return { error: "That event doesn't exist any more." };
   if (await isBanned(event.id, me.id)) return { error: "The organisers have removed you from this event." };
+  if (!CHECKIN_REQUIRED) return joinEvent(slug);
   if (!(await allow(`checkin:${me.id}`, 20, 3600))) return { error: "Slow down a little and try again in a few minutes." };
   const valid = await query("SELECT 1 FROM events WHERE id = $1 AND checkin_key = $2", [event.id, key.trim().toUpperCase()]);
   if (!valid.length) return { error: "That check-in code has changed. Scan the one at the venue." };

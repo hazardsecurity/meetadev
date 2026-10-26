@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { pool } from "./db";
+import { CONFIRMED } from "./events";
 import { slugify } from "./format";
 
 const newHandle = (name: string) => `${slugify(name, 20) || "dev"}-${randomBytes(3).toString("hex").slice(0, 4)}`;
@@ -54,6 +55,40 @@ export async function createAccount(identity: Identity) {
     await client.query("UPDATE users SET erased_key = NULL WHERE erased_key = $1", [key]);
     await client.query("COMMIT");
     return rows[0].id;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Delete an account: a stand-in keeps confirmed meetings (for the other person), bans, blocks and reports, tied
+ * only to erasedKey(Google ID); deleting the users row removes everything else. Used by "Delete my account" and
+ * by admins answering a deletion request.
+ */
+export async function eraseUser(userId: string) {
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query<{ id: string }>(
+      "INSERT INTO users (email) VALUES ('deleted+' || gen_random_uuid() || '@meetadev.invalid') RETURNING id",
+    );
+    const standIn = rows[0].id;
+    await client.query(`UPDATE meetings a SET from_user = $2 WHERE a.from_user = $1 AND ${CONFIRMED}`, [userId, standIn]);
+    await client.query(
+      `UPDATE meetings a SET to_user = $2 WHERE a.to_user = $1
+         AND EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = $2 AND b.to_user = a.from_user)`,
+      [userId, standIn],
+    );
+    const { rows: [{ google_sub }] } = await client.query<{ google_sub: string | null }>("SELECT google_sub FROM users WHERE id = $1", [userId]);
+    await client.query("UPDATE users SET erased_key = $2 WHERE id = $1", [standIn, google_sub ? erasedKey(google_sub) : null]);
+    // Reports I made stay too, without my name; they're about someone else, and never come back to me.
+    for (const [table, column] of [...KEPT_AFTER_DELETE, ["reports", "reporter"]])
+      await client.query(`UPDATE ${table} SET ${column} = $2 WHERE ${column} = $1`, [userId, standIn]);
+    await client.query("DELETE FROM users WHERE id = $1", [userId]);
+    await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

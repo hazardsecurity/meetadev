@@ -4,7 +4,9 @@ import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
 import { DeleteAccount } from "@/components/DeleteAccount";
+import { LegalLinks } from "@/components/LegalLinks";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { AnalyticsToggle } from "@/components/Analytics";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { InstallRow } from "@/components/AppPrompt";
 import { IntentChips, roleLine } from "@/components/Chips";
@@ -76,6 +78,8 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           <ThemeSwitch />
         </div>
 
+        <AnalyticsToggle />
+
         <div className="stats">
           <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>
           <div className="card stat"><strong>{c.met}</strong><span>People met</span></div>
@@ -87,6 +91,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         </div>
         {!p.listed && <p className="hint">You&apos;re hidden from the directory. People can still reach you through your QR code.</p>}
         <DeleteAccount />
+        <LegalLinks />
       </section>
     </div>
   );

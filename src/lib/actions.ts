@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { erasedKey, KEPT_AFTER_DELETE } from "./accounts";
+import { eraseUser } from "./accounts";
 import { currentUser, endSession, safeNext } from "./auth";
 import { tidyCities } from "./cities";
 import { pool, query } from "./db";
-import { CONFIRMED, hereTogether } from "./events";
+import { CHECKIN_REQUIRED, hereTogether } from "./events";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 import { firstError, profileSchema, type ProfileInput } from "./validation";
 
 // `values` echoes what was submitted so a form can refill itself after an error
@@ -41,32 +42,7 @@ export async function deleteAccount(typed: string): Promise<FormState> {
   );
   if (solo[0]) return { error: `You're the only organiser of ${solo[0].name}. Make someone else an organiser first.` };
 
-  const client = await pool().connect();
-  try {
-    await client.query("BEGIN");
-    const { rows } = await client.query<{ id: string }>(
-      "INSERT INTO users (email) VALUES ('deleted+' || gen_random_uuid() || '@meetadev.invalid') RETURNING id",
-    );
-    const standIn = rows[0].id;
-    await client.query(`UPDATE meetings a SET from_user = $2 WHERE a.from_user = $1 AND ${CONFIRMED}`, [me.id, standIn]);
-    await client.query(
-      `UPDATE meetings a SET to_user = $2 WHERE a.to_user = $1
-         AND EXISTS (SELECT 1 FROM meetings b WHERE b.event_id = a.event_id AND b.from_user = $2 AND b.to_user = a.from_user)`,
-      [me.id, standIn],
-    );
-    const { rows: [{ google_sub }] } = await client.query<{ google_sub: string | null }>("SELECT google_sub FROM users WHERE id = $1", [me.id]);
-    await client.query("UPDATE users SET erased_key = $2 WHERE id = $1", [standIn, google_sub ? erasedKey(google_sub) : null]);
-    // Reports I made stay too, without my name; they're about someone else, and never come back to me.
-    for (const [table, column] of [...KEPT_AFTER_DELETE, ["reports", "reporter"]])
-      await client.query(`UPDATE ${table} SET ${column} = $2 WHERE ${column} = $1`, [me.id, standIn]);
-    await client.query("DELETE FROM users WHERE id = $1", [me.id]);
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  await eraseUser(me.id);
   await endSession();
   redirect("/");
 }
@@ -100,6 +76,7 @@ export async function saveProfile(input: ProfileInput, next: string): Promise<Fo
       tidyCities(p.cities),
     ],
   );
+  if (!me.onboarded) await track(me.id, "badge created");
   revalidatePath("/", "layout");
   redirect(me.onboarded ? "/me?saved=1" : `/welcome?next=${encodeURIComponent(safeNext(next))}`);
 }
@@ -186,6 +163,8 @@ export async function wantToMeet(toUserId: string, slug?: string): Promise<FormS
   if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
 
   const result = await recordWant(me.id, toUserId, event.id);
+  await track(me.id, "meet tapped", { event_id: event.id, matched: result === "connected" });
+  if (result === "connected") await track(me.id, "matched", { event_id: event.id });
   if (result === "connected")
     await notify(toUserId, { title: "It's a match", body: `You and ${me.name} both want to meet. Say hi.`, url: `/chat/${me.handle}`, tag: `match-${me.id}` });
   return { ok: result === "wanted" ? "wanted" : "connected" };
@@ -204,6 +183,7 @@ export async function pass(slug: string, userId: string): Promise<FormState> {
   if (!event) return { error: "They're not at this event any more." };
   if (!(await allow(`want:${me.id}`, 300, 86_400))) return { error: "That's a lot of people for one day. Try again tomorrow." };
   await query("INSERT INTO passes (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, userId]);
+  await track(me.id, "passed", { event_id: event.id });
   return { ok: "passed" };
 }
 
@@ -224,12 +204,13 @@ export async function weMet(otherId: string): Promise<FormState> {
   if (otherId === me.id) return { error: "That's you!" };
   if (await blockedBetween(me.id, otherId)) return { error: "You can't meet this person." };
   const event = await hereTogether(me.id, otherId);
-  if (!event) return { error: "We met counts when you've both checked in at the same event today." };
+  if (!event) return { error: CHECKIN_REQUIRED ? "We met counts when you've both checked in at the same event today." : "We met counts when you've both joined the same event." };
   if (!(await allow(`met:${me.id}`, 100, 86_400))) return { error: "That's a lot of meetings for one day. Try again tomorrow." };
 
   await query("INSERT INTO meetings (event_id, from_user, to_user) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [event.id, me.id, otherId]);
   const want = await recordWant(me.id, otherId, event.id);
   const theirs = await query("SELECT 1 FROM meetings WHERE event_id = $1 AND from_user = $2 AND to_user = $3", [event.id, otherId, me.id]);
+  await track(me.id, theirs.length ? "met confirmed" : "we met tapped", { event_id: event.id });
   if (theirs.length)
     await notify(otherId, { title: `You and ${me.name} met`, body: `+1 on the ${event.name} leaderboard.`, url: `/e/${event.slug}/leaderboard`, tag: `met-${me.id}` });
   // Their half stays private until they're connected to us; once they are, nudge them.

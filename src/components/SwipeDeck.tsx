@@ -23,8 +23,10 @@ const COACHED = "mad-deck-coached";
 const wasCoached = () => { try { return !!localStorage.getItem(COACHED); } catch { return false; } };
 
 /** People who are here, one at a time. Meet stays private until it's mutual; Pass hides them at this event. */
-export function SwipeDeck({ slug, cards, me, waiting }: {
+export function SwipeDeck({ slug, cards, me, waiting, checkin = true }: {
   slug: string; cards: DeckCard[]; me: { name: string; color: number; photo_url: string }; waiting: number;
+  /** False while joining is enough: no "Here" badge or "here today" talk on the cards. */
+  checkin?: boolean;
 }) {
   const [i, setI] = useState(0);
   const [done, setDone] = useState<DeckCard[]>([]); // newest last; Undo walks back through it
@@ -121,7 +123,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
         <AyoSays mood="happy" side="below">
           {waiting > 0
             ? `You've seen everyone here for now. ${waiting} more ${waiting === 1 ? "person has" : "people have"} joined but not checked in yet. They'll show up once they do.`
-            : "You've seen everyone here for now. New people show up as they check in."}
+            : "You've seen everyone here for now. New people show up as they join."}
         </AyoSays>
         <div className="row" style={{ justifyContent: "center" }}>
           {done.length > 0 && <button className="btn btn--white btn--sm" onClick={undo}>Go back one</button>}
@@ -134,7 +136,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
     <div className="deck-wrap">
       <div className="deck">
         {cards[i + 1] && <div className="dcard dcard--peek" aria-hidden />}
-        <Card key={card.user_id} card={card} onSwipe={choose} locked={coach} />
+        <Card key={card.user_id} card={card} onSwipe={choose} checkin={checkin} locked={coach} />
         {coach && (
           <div className="coach" data-hold-prompt role="dialog" aria-label="How the deck works">
             <p className="coach__zone"><ArrowLeft size={28} aria-hidden /><strong>Swipe left to pass</strong><small>They never know.</small></p>
@@ -156,7 +158,7 @@ export function SwipeDeck({ slug, cards, me, waiting }: {
   );
 }
 
-function Card({ card, onSwipe, locked }: { card: DeckCard; onSwipe: (c: Choice) => void; locked: boolean }) {
+function Card({ card, onSwipe, checkin, locked }: { card: DeckCard; onSwipe: (c: Choice) => void; checkin: boolean; locked: boolean }) {
   const still = useReducedMotion();
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-240, 240], [-10, 10]);
@@ -182,7 +184,7 @@ function Card({ card, onSwipe, locked }: { card: DeckCard; onSwipe: (c: Choice) 
       <motion.span className="stamp stamp--pass" style={{ opacity: pass }} aria-hidden>Pass</motion.span>
       <div className="dcard__top">
         <Avatar name={card.name} color={card.color} photo={card.photo_url} size={120} />
-        <span className="chip chip--green dcard__here"><span className="live" aria-hidden />Here</span>
+        {checkin && <span className="chip chip--green dcard__here"><span className="live" aria-hidden />Here</span>}
       </div>
       <div className="dcard__body">
         <div>
@@ -190,7 +192,7 @@ function Card({ card, onSwipe, locked }: { card: DeckCard; onSwipe: (c: Choice) 
           <p className="person__meta">{roleLine(card.role, card.level)}</p>
         </div>
         {card.headline && <p>{card.headline}</p>}
-        <p className="person__why"><span aria-hidden>💡</span>{card.reason || "You're both here today. Say hi?"}</p>
+        <p className="person__why"><span aria-hidden>💡</span>{card.reason || (checkin ? "You're both here today. Say hi?" : "You're both going. Say hi?")}</p>
         <IntentChips intents={card.intents} max={3} />
         {card.stack.length > 0 && <div className="chips">{card.stack.slice(0, 4).map((s) => <span key={s} className="chip">{s}</span>)}</div>}
         <Link href={`/p/${card.handle}`} className="link dcard__more" draggable={false}>See their full badge</Link>

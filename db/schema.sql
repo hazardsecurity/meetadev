@@ -273,6 +273,26 @@ BEGIN
   END IF;
 END $$;
 
+-- Admin console (additive, safe to run on every build).
+-- A suspended account can't sign in, and its sessions stop working; unsuspending restores it unchanged.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_reason text NOT NULL DEFAULT '';
+-- An admin closing a report platform-wide. Organisers still dismiss reports for their own event by deleting them.
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS resolved_by uuid REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS reports_open_idx ON reports (created_at DESC) WHERE resolved_at IS NULL;
+-- Every admin action, so admins can see who did what.
+CREATE TABLE IF NOT EXISTS admin_log (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id    uuid REFERENCES users(id) ON DELETE SET NULL,
+  admin_email text NOT NULL,
+  action      text NOT NULL,
+  target      text NOT NULL DEFAULT '',
+  detail      text NOT NULL DEFAULT '',
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS admin_log_created_idx ON admin_log (created_at DESC);
+
 -- The organiser's colour for their event's buttons and stripe; ids in src/lib/accents.ts.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS accent text NOT NULL DEFAULT 'meetadev';
 

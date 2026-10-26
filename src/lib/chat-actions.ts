@@ -7,6 +7,7 @@ import { query } from "./db";
 import { publicLinks } from "./links";
 import { notify } from "./push";
 import { allow } from "./ratelimit";
+import { track } from "./analytics";
 import { firstError, phone } from "./validation";
 
 const RETURNING = `RETURNING id, from_user, kind, body, ${iso("created_at")} AS created_at, NULL AS delivered_at, NULL AS read_at`;
@@ -29,6 +30,7 @@ export async function sendMessage(toUserId: string, raw: string): Promise<{ erro
     url: `/chat/${me.handle}`,
     tag: `chat-${me.id}`,
   });
+  await track(me.id, "message sent");
   revalidatePath("/connections");
   return { message: rows[0] };
 }
@@ -61,6 +63,7 @@ export async function shareContact(toUserId: string, number = ""): Promise<{ err
     [me.id, toUserId, JSON.stringify(card)],
   );
   await notify(toUserId, { title: p.name, body: `${p.name.split(" ")[0]} shared their contact with you.`, url: `/chat/${p.handle}`, tag: `chat-${me.id}` });
+  await track(me.id, "contact shared", { asked_for_number: !!number });
   revalidatePath("/connections");
   return { message: rows[0] };
 }

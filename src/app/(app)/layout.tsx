@@ -8,6 +8,7 @@ import { SignInLink } from "@/components/SignInLink";
 import { currentUser } from "@/lib/auth";
 import { EventSwitcher } from "@/components/EventSwitcher";
 import { InboxPulse } from "@/components/InboxPulse";
+import { AnalyticsIdentify } from "@/components/Analytics";
 import { AppPrompt } from "@/components/AppPrompt";
 import { eventBySlug, membership, myEvents, splitByDate, type MyEvent } from "@/lib/events";
 import { formatDate } from "@/lib/format";
@@ -52,6 +53,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <main className="wrap app-main">{children}</main>
       {member && <Nav unread={unread} peopleHref={peopleHref} className="nav tabbar" />}
       {member && <InboxPulse />}
+      {me && <AnalyticsIdentify userId={me.id} />}
       {member && <AppPrompt />}
     </>
   );

@@ -13,7 +13,7 @@ Everything is built from five primitives. A new feature should be one of these, 
 | Primitive | Stored as | Rule |
 |---|---|---|
 | **Person** | `profiles` | One badge, reused at every event. |
-| **Here** | `event_members.checked_in_at` | Set by scanning the event's check-in code (`/e/<slug>/checkin?k=…`), shown only at the venue. Joining isn't being here. Lasts for that day (Lagos time), and only on the event's date when it has one. |
+| **Here** | `event_members.checked_in_at` | **For now, joining an event is enough** (`CHECKIN_REQUIRED` is off). With `CHECKIN_REQUIRED=1`: set by scanning the event's check-in code (`/e/<slug>/checkin?k=…`), shown only at the venue; lasts for that day (Lagos time), and only on the event's date when it has one. |
 | **Want to meet** | a `pending` row in `connection_requests` | One-way and private: never shown or sent to the person it's about. |
 | **Connection** | the same row, `accepted` | Both want to meet. The only moment anyone is told. Unlocks chat and contact details. |
 | **Met** | a `meetings` row from each person for the same event | Each taps We met; it counts once both have, at an event both are here at that day. |
@@ -29,7 +29,7 @@ The one number: of the matches made at an event, how many became meetings.
 - **Event colour**: one of eight swatches (`src/lib/accents.ts`, each checked for text contrast). The event's pages, primary buttons, deck cards and projector slide use it; the default keeps the four meetadev colours.
 - **Show in "Find events"** (on by default): people who follow the event's city see it at `/discover`.
 - **Invite people**: an invite link (with the join code built in), a QR code, and a 6-character join code for anyone who can't scan (they type it in Events, under "Have a join code?"). "Show on screen" opens a full-screen join slide for the projector.
-- **Check-in code**: a second QR, for the venue only (posters, the welcome screen: "Show on screen" opens `/e/<slug>/screen?show=checkin`). Scanning it is what makes someone here, and only people who are here show up in the deck. "Make a new code" stops the old one working.
+- **Check-in code** (only when `CHECKIN_REQUIRED=1`): a second QR, for the venue only (posters, the welcome screen: "Show on screen" opens `/e/<slug>/screen?show=checkin`). Scanning it is what makes someone here, and only people who are here show up in the deck. "Make a new code" stops the old one working.
 - **Joining is open**: anyone signed in can join from the event page. The invite link and code are shortcuts, not a lock. "Make a new code" stops the old code working.
 - **Dashboard** at `/e/<slug>/manage`: the funnel (joined, here, swiped, matched, met), reports, members with when they checked in and how many people they've met, filterable to who's here.
 - **Members**: make co-organisers, remove someone (they can rejoin), or ban them from the event.
@@ -97,6 +97,10 @@ Without Google keys you can still test locally: set `ALLOW_DEV_LOGIN=1` in `.env
 3. Add the Google variables above, and `ADMIN_EMAILS` with the Google email(s) of whoever approves organisers.
 4. Deploy. `prebuild` runs the migration on every deploy.
 
+## Legal pages
+
+`/privacy`, `/terms` and `/guidelines` are public and linked from the landing page, sign-in and My badge. The facts they quote (operator, contact email, last-updated date) live in `src/lib/legal.ts`. When a feature changes what is stored or who can see it, update the privacy page in the same change. Add the privacy and terms URLs to the Google OAuth consent screen.
+
 ## Stack
 
 Next.js 16 (App Router, Server Actions, `proxy.ts`), Postgres via `pg`, zod, Motion, `qrcode`. Google Sans / Google Sans Code fonts. Auth is Google OpenID Connect (authorization code + PKCE, state check, no extra library); sessions are httpOnly cookies and only token hashes are stored.
@@ -104,7 +108,6 @@ Next.js 16 (App Router, Server Actions, `proxy.ts`), Postgres via `pg`, zod, Mot
 ## Not built yet
 
 - Event logos.
-- Deleting an event (organisers can leave, but the event stays).
 - Email notifications (e.g. telling an organiser they were approved). They see it next time they open "Create an event".
 - A fixed list of cities. Cities are free text, tidied ("lagos " becomes "Lagos") and matched case-insensitively, with suggestions from cities that already have events.
 - Uploading a different profile photo (the Google photo is used, otherwise coloured initials).

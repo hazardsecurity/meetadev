@@ -7,7 +7,7 @@ import { InviteQR } from "@/components/InviteQR";
 import { CheckinTools, CodeTools, DeleteEvent, LeaveEvent, MemberList, Reports } from "@/components/OrganiserTools";
 import { requireMember } from "@/lib/auth";
 import { eventCommunityOptions } from "@/lib/communities";
-import { checkinKey, eventBySlug, eventReports, eventStats, members, membership } from "@/lib/events";
+import { CHECKIN_REQUIRED, checkinKey, eventBySlug, eventReports, eventStats, members, membership } from "@/lib/events";
 import { isAdmin } from "@/lib/organizers";
 
 export const metadata: Metadata = { title: "Organiser tools", robots: { index: false } };
@@ -29,8 +29,8 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
   // The funnel is the core loop counted: each step is people, drawn to scale against everyone who joined.
   const funnel = [
     { label: "Joined", n: stats.joined, of: "" },
-    { label: "Here", n: stats.here, of: "joined", prev: stats.joined },
-    { label: "Swiped", n: stats.swiped, of: "here", prev: stats.here },
+    ...(CHECKIN_REQUIRED ? [{ label: "Here", n: stats.here, of: "joined", prev: stats.joined }] : []),
+    { label: "Swiped", n: stats.swiped, of: CHECKIN_REQUIRED ? "here" : "joined", prev: CHECKIN_REQUIRED ? stats.here : stats.joined },
     { label: "Matched", n: stats.matched, of: "swipers", prev: stats.swiped },
     { label: "Met", n: stats.met, of: "matched", prev: stats.matched },
   ];
@@ -66,19 +66,19 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
             </p>
           </section>
 
-          <section className="card stack">
+          {CHECKIN_REQUIRED && <section className="card stack">
             <h2 className="h2">Check-in code</h2>
             <InviteQR path={`/e/${slug}/checkin?k=${key}`} title={`Check in to ${event.name}`} linkName="check-in link" />
             <CheckinTools slug={slug} />
             <p className="hint" style={{ textAlign: "center" }}>
               Put it up at the venue only. Scanning it is what makes someone &ldquo;here&rdquo;, and only people who are here show up in the deck.
             </p>
-          </section>
+          </section>}
         </div>
 
         <div className="stack">
           <section className="card stack">
-            <h2 className="h2">Today so far</h2>
+            <h2 className="h2">{CHECKIN_REQUIRED ? "Today so far" : "So far"}</h2>
             <div className="funnel" role="table" aria-label="How many people reached each step">
               {funnel.map((f) => (
                 <div key={f.label} className="funnel__step" role="row">
@@ -101,7 +101,7 @@ export default async function ManagePage({ params, searchParams }: PageProps<"/e
 
           <section className="card stack">
             <h2 className="h2">Members</h2>
-            <MemberList slug={slug} me={me.id} list={list} />
+            <MemberList slug={slug} me={me.id} list={list} checkin={CHECKIN_REQUIRED} />
           </section>
 
           <section className="card stack">

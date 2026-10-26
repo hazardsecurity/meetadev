@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Ayo } from "@/components/Ayo";
 import { InviteQR } from "@/components/InviteQR";
 import { requireMember } from "@/lib/auth";
-import { checkinKey, eventBySlug, membership } from "@/lib/events";
+import { CHECKIN_REQUIRED, checkinKey, eventBySlug, membership } from "@/lib/events";
 import { isAdmin } from "@/lib/organizers";
 
 export const metadata: Metadata = { title: "Join screen", robots: { index: false } };
@@ -18,7 +18,7 @@ export default async function ScreenPage({ params, searchParams }: PageProps<"/e
   // Same rule as Manage, which links here: the event's organisers and platform admins.
   if ((await membership(event.id, me.id)) !== "organizer" && !isAdmin(me)) redirect(`/e/${slug}`);
 
-  if ((await searchParams).show === "checkin")
+  if (CHECKIN_REQUIRED && (await searchParams).show === "checkin")
     return (
       <main className="screen">
         <div className="screen__copy">
@@ -38,7 +38,7 @@ export default async function ScreenPage({ params, searchParams }: PageProps<"/e
         <div className="event-head__band" aria-hidden><i /><i /><i /><i /></div>
         <p className="eyebrow">Find the people you should meet</p>
         <h1 className="display">{event.name}</h1>
-        <p className="screen__lead">Scan to join, then sign in with Google. Ayo will show you who to say hi to.</p>
+        <p className="screen__lead">Scan to join, then sign in with Google. Swipe through the people here and meet the ones you match with.</p>
         <p className="screen__code">Join code <strong className="join-code">{event.join_code}</strong></p>
         <Ayo mood="wave" size={150} />
       </div>
