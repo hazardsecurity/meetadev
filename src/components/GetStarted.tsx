@@ -20,12 +20,12 @@ const SLIDES: Slide[] = [
   },
   {
     title: "Your number stays yours",
-    body: "Send a request, or scan someone's badge. WhatsApp and phone numbers are only swapped when you both say yes.",
+    body: "Tap Meet, or scan someone's badge. Nobody knows unless it's mutual, and WhatsApp numbers are only swapped when you both say yes.",
     art: () => <ArtPrivacy />,
   },
   {
     title: "Climb the leaderboard",
-    body: "Every connection counts. See who's met the most people at your event, and how many more you need to move up.",
+    body: "Every person you meet counts. See who's met the most people at your event, and how many more you need to move up.",
     art: () => <ArtPodium />,
   },
 ];

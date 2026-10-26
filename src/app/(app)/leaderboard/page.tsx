@@ -24,7 +24,7 @@ export default async function LeaderboardTab() {
       {events.length === 0 ? (
         <>
           <AyoSays mood="thinking" size={84}>
-            Each event has its own leaderboard. Join an event, connect with people there, and you&apos;ll show up on it.
+            Each event has its own leaderboard. Join an event, meet people there in person, and you&apos;ll show up on it.
           </AyoSays>
           <Link className="btn" href="/discover" style={{ justifySelf: "start" }}>Find events</Link>
         </>

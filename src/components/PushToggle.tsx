@@ -94,8 +94,8 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
       <div className="push__text">
         <strong>Notifications</strong>
         <span className="hint">
-          {state === "on" && "On for this device. You'll hear about new requests and messages."}
-          {state === "off" && "Get a ping when someone wants to connect or sends you a message."}
+          {state === "on" && "On for this device. You'll hear about matches, messages and people you know arriving."}
+          {state === "off" && "Get a ping when you match with someone or get a message."}
           {state === "blocked" && "Blocked in your browser settings. Allow notifications for meetadev there, then come back."}
           {state === "ios-install" && "On iPhone: tap Share, then “Add to Home Screen”, and open meetadev from there to turn these on."}
           {state === "unsupported" && "This browser doesn't support notifications."}

@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { saveProfile } from "@/lib/actions";
 import { INTENTS, LEVELS, ROLES, STACK } from "@/lib/options";
 import type { ProfileInput } from "@/lib/validation";
 import { AyoSays, type Mood } from "./Ayo";
 import { CityInput } from "./CityInput";
+import { useHydrated } from "./LocalTime";
 
 type Step = { key: string; say: (p: ProfileInput) => string; mood?: Mood; valid: (p: ProfileInput) => boolean };
+
+// Answers so far, kept in this tab so a refresh on venue Wi-Fi doesn't lose them (cleared on Finish).
+const DRAFT = "meetadev:badge-draft";
+// A step must be on screen this long before Continue/Back counts, so a double tap can't skip a step unseen.
+const SETTLE_MS = 350;
 
 const STEPS: Step[] = [
   { key: "role", say: (p) => `Hey ${p.name.split(" ")[0]}! What do you do?`, mood: "wave", valid: (p) => !!p.role },
@@ -18,7 +24,7 @@ const STEPS: Step[] = [
   { key: "intents", say: () => "What are you hoping to get from events like this? Pick all that fit.", valid: (p) => p.intents.length > 0 },
   { key: "stack", say: () => "What do you work with, or want to learn? I'll match you with people who share it.", mood: "thinking", valid: () => true },
   { key: "about", say: () => "Give people a one-line hello so they know who to look out for.", valid: (p) => p.name.trim().length >= 2 },
-  { key: "contact", say: () => "How should your connections reach you? Only people you accept will see this.", mood: "wink",
+  { key: "contact", say: () => "How should your connections reach you? Only people you both want to meet will see this.", mood: "wink",
     valid: (p) => !!(p.whatsapp || p.phone || p.contact_email) },
   { key: "links", say: () => "Last one! Public links people at your events can see. All optional.", mood: "excited", valid: () => true },
 ];
@@ -32,6 +38,18 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const still = useReducedMotion();
+  const shownAt = useRef(0);
+
+  // Bring back a draft from this tab once, after hydration (the server can't see sessionStorage).
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(editing);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const draft = readDraft();
+    if (draft?.owner === initial.contact_email) { setP({ ...initial, ...draft.p }); setI(draft.i); }
+  }
+  const saveDraft = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ owner: initial.contact_email, p, i })); } catch {} };
+  useEffect(() => { if (restored && !editing && !pending) saveDraft(); });
   const step = STEPS[i];
   // Coming from "I'm a GDG organiser": explain why organisers make a badge too.
   const organiser = !editing && next.startsWith("/events/new");
@@ -50,9 +68,14 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
       return { ...s, [k]: list.includes(v) ? list.filter((x) => x !== v) : list.length >= max ? list : [...list, v] };
     });
 
-  const go = (d: number) => { setDir(d); setError(""); setI((n) => Math.min(STEPS.length - 1, Math.max(0, n + d))); };
+  const ready = () => performance.now() - shownAt.current >= SETTLE_MS;
+  const go = (d: number) => {
+    shownAt.current = performance.now();
+    setDir(d); setError(""); setI((n) => Math.min(STEPS.length - 1, Math.max(0, n + d)));
+  };
   const submit = () =>
     start(async () => {
+      try { sessionStorage.removeItem(DRAFT); } catch {}
       const res = await saveProfile(p, next);
       if (res?.error) setError(res.error);
     });
@@ -143,7 +166,7 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
 
             {step.key === "contact" && (
               <div className="stack">
-                <p className="lock-note"><span aria-hidden>🔒</span> Private. Only shown to people after <strong>you</strong> accept them, or they accept you.</p>
+                <p className="lock-note"><span aria-hidden>🔒</span> Private. Only shown to people once you <strong>both</strong> tap Meet.</p>
                 <Field id="whatsapp" label="WhatsApp number" type="tel" placeholder="+234 801 234 5678" value={p.whatsapp} onChange={(v) => set("whatsapp", v)} max={24} autoComplete="tel" />
                 <Field id="phone" label="Phone number (if different)" type="tel" value={p.phone} onChange={(v) => set("phone", v)} max={24} />
                 <Field id="contact_email" label="Email for contacts" type="email" value={p.contact_email} onChange={(v) => set("contact_email", v)} max={120} autoComplete="email" />
@@ -170,12 +193,12 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
 
       <footer className="onb__foot">
         <div className="wrap row" style={{ justifyContent: "space-between" }}>
-          {i > 0 ? <button type="button" className="btn btn--white" onClick={() => go(-1)}>Back</button> : <span />}
+          {i > 0 ? <button type="button" className="btn btn--white" onClick={() => ready() && go(-1)}>Back</button> : <span />}
           <button
             type="button"
             className={`btn ${step.valid(p) ? "btn--green" : ""}`}
             disabled={!step.valid(p) || pending}
-            onClick={() => (last ? submit() : go(1))}
+            onClick={() => { if (!ready()) return; if (last) submit(); else go(1); }}
           >
             {last ? (pending ? "Saving…" : editing ? "Save" : "Finish") : "Continue"}
           </button>
@@ -183,6 +206,10 @@ export function Onboarding({ initial, editing, next, citySuggestions }: {
       </footer>
     </div>
   );
+}
+
+function readDraft(): { owner: string; p: Partial<ProfileInput>; i: number } | null {
+  try { return JSON.parse(sessionStorage.getItem(DRAFT) ?? "null"); } catch { return null; }
 }
 
 function Bars({ n }: { n: number }) {

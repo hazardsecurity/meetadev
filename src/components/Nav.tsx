@@ -1,6 +1,6 @@
 "use client";
 
-import { IdCard, Inbox, MessageCircle, Trophy, Users, type LucideIcon } from "lucide-react";
+import { IdCard, MessageCircle, Trophy, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,13 +10,12 @@ type Tab = { key: string; label: string; Icon: LucideIcon; tone: "blue" | "red" 
 
 const TABS: Tab[] = [
   { key: "people", label: "People", Icon: Users, tone: "blue" },
-  { key: "requests", label: "Requests", Icon: Inbox, tone: "red" },
   { key: "contacts", label: "Chats", Icon: MessageCircle, tone: "green" },
   { key: "leaderboard", label: "Leaderboard", Icon: Trophy, tone: "yellow" },
   { key: "me", label: "My badge", Icon: IdCard, tone: "blue" },
 ];
 
-export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { incoming: number; unread?: number; peopleHref: string; className?: string }) {
+export function Nav({ unread = 0, peopleHref, className = "nav" }: { unread?: number; peopleHref: string; className?: string }) {
   const path = usePathname();
   // The layout's count is from page load; InboxPulse keeps it fresh.
   const [live, setLive] = useState<number | null>(null);
@@ -46,7 +45,6 @@ export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { i
   const href = (key: string) =>
     ({
       people: peopleHref,
-      requests: "/requests",
       contacts: "/connections",
       // Straight to the current event's board, skipping /leaderboard's redirect.
       leaderboard: peopleHref.startsWith("/e/") ? `${peopleHref}/leaderboard` : "/leaderboard",
@@ -65,11 +63,9 @@ export function Nav({ incoming, unread = 0, peopleHref, className = "nav" }: { i
         <Link key={key} href={href(key)} className={`tab tab--${tone}`} aria-current={active(key) ? "page" : undefined}>
           <span className="tab__icon" aria-hidden>
             <Icon size={20} strokeWidth={2.4} />
-            {key === "requests" && incoming > 0 && <span className="badge-count tab__badge">{incoming > 9 ? "9+" : incoming}</span>}
             {key === "contacts" && unreadNow > 0 && <span className="badge-count tab__badge">{unreadNow > 9 ? "9+" : unreadNow}</span>}
           </span>
           <span className="tab__label">{label}</span>
-          {key === "requests" && incoming > 0 && <span className="sr-only">, {incoming} new</span>}
           {key === "contacts" && unreadNow > 0 && <span className="sr-only">, {unreadNow} unread</span>}
         </Link>
       ))}

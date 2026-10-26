@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { AyoSays } from "@/components/Ayo";
 import { BadgeQR } from "@/components/BadgeQR";
+import { DeleteAccount } from "@/components/DeleteAccount";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { LogoutButton, PushToggle } from "@/components/PushToggle";
 import { IntentChips, roleLine } from "@/components/Chips";
@@ -75,7 +76,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
 
         <div className="stats">
           <Link href="/connections" className="card stat"><strong>{c.connected}</strong><span>Connections</span></Link>
-          <Link href="/requests" className="card stat"><strong>{c.incoming}</strong><span>New requests</span></Link>
+          <div className="card stat"><strong>{c.met}</strong><span>People met</span></div>
         </div>
 
         <div className="row" style={{ justifyContent: "space-between" }}>
@@ -83,6 +84,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           <LogoutButton />
         </div>
         {!p.listed && <p className="hint">You&apos;re hidden from the directory. People can still reach you through your QR code.</p>}
+        <DeleteAccount />
       </section>
     </div>
   );

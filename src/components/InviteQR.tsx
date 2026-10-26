@@ -2,12 +2,14 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { useHydrated } from "./LocalTime";
 
-/** QR + copy/share for an event invite link. `path` is relative to the site origin. */
-export function InviteQR({ path, title, size = 200, actions = true }: { path: string; title: string; size?: number; actions?: boolean }) {
+/** QR + copy/share for an event link (the invite, or the check-in code). `path` is relative to the site origin. */
+export function InviteQR({ path, title, size = 200, actions = true, linkName = "invite link" }: { path: string; title: string; size?: number; actions?: boolean; linkName?: string }) {
   const [svg, setSvg] = useState("");
   const [url, setUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const hydrated = useHydrated();
 
   useEffect(() => {
     const link = `${window.location.origin}${path}`;
@@ -32,8 +34,9 @@ export function InviteQR({ path, title, size = 200, actions = true }: { path: st
         <>
           <code className="invite-url">{url}</code>
           <div className="row" style={{ justifyContent: "center" }}>
-            <button className="btn btn--sm" onClick={copy} disabled={!url}>{copied ? "Copied!" : "Copy invite link"}</button>
-            {typeof navigator !== "undefined" && "share" in navigator && (
+            <button className="btn btn--sm" onClick={copy} disabled={!url}>{copied ? "Copied!" : `Copy ${linkName}`}</button>
+            {/* After hydration only: the server can't know if this browser can share. */}
+            {hydrated && "share" in navigator && (
               <button className="btn btn--white btn--sm" onClick={share} disabled={!url}>Share</button>
             )}
           </div>

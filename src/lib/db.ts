@@ -6,7 +6,7 @@ const globalForDb = globalThis as unknown as { pool?: Pool };
 function createPool() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local and fill it in.");
-  const local = /@(localhost|127\.0\.0\.1)(:|\/)/.test(url);
+  const local = URL.canParse(url) && ["localhost", "127.0.0.1"].includes(new URL(url).hostname); // the real host, not "@localhost" in a password (BUG-024)
   return new Pool({
     connectionString: url,
     ssl: url.includes("sslmode=") || local ? undefined : true,

@@ -13,7 +13,7 @@ if (!url) {
   process.exit(1);
 }
 
-const local = /@(localhost|127\.0\.0\.1)(:|\/)/.test(url);
+const local = URL.canParse(url) && ["localhost", "127.0.0.1"].includes(new URL(url).hostname); // the real host, not "@localhost" in a password (BUG-024)
 const client = new pg.Client({
   connectionString: url,
   ssl: url.includes("sslmode=") || local ? undefined : true,
